@@ -1,4 +1,6 @@
+# Plain static site: nothing to build, just publish the public/ folder.
 [build]
+  command = "echo 'static site, nothing to build'"
   publish = "public"
 
 [[headers]]
