@@ -3,152 +3,132 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#5a3516">
+<meta name="theme-color" content="#2563eb">
 <title>Color Breaker</title>
 <style>
   :root {
-    --wood-1: #b97a43; --wood-2: #a96a36; --wood-dark: #5a3516; --wood-deep: #3b200c;
-    --carve: #7e4a22; --gold: #ffe27a;
+    color-scheme: light dark;
+    --bg: #ffffff; --fg: #1b1b1f; --muted: #6b7280; --border: #e5e7eb; --panel: #f9fafb; --link: #2563eb;
+    --hole: #eef0f3; --peg-black: #1b1b1f; --peg-white: #ffffff;
     --d: min(46px, calc((min(100vw, 460px) - 150px) / var(--n, 4) - 8px));
   }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14151a; --fg: #e7e7ea; --muted: #9aa0aa; --border: #2a2b32; --panel: #1b1c22; --link: #7db4ff;
+      --hole: #23242b; --peg-black: #000000; --peg-white: #e7e7ea;
+    }
+  }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body { margin: 0; background: #1c1108; }
+  html, body { touch-action: manipulation; }
   body {
-    min-height: 100vh; font-family: "Trebuchet MS", "Segoe UI", system-ui, sans-serif; color: #fff4d6;
-    display: flex; justify-content: center;
+    margin: 0; min-height: 100vh; background: var(--bg); color: var(--fg);
+    font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
   }
   button { font: inherit; cursor: pointer; color: inherit; }
   .hidden { display: none !important; }
-
-  /* the wooden board */
-  .screen {
-    width: 100%; max-width: 480px; min-height: 100vh; padding: 14px 12px 20px;
-    display: flex; flex-direction: column; align-items: center; gap: 10px;
-    background:
-      repeating-linear-gradient(92deg, rgba(0,0,0,.05) 0 2px, rgba(255,255,255,.04) 2px 5px, transparent 5px 11px),
-      linear-gradient(180deg, var(--wood-1), var(--wood-2) 55%, #9c5f2e);
-    box-shadow: inset 0 0 0 3px #7a4a24, inset 0 0 40px rgba(0,0,0,.35);
-  }
-
-  .plaque {
-    font-weight: 800; letter-spacing: 3px; text-transform: uppercase; text-align: center;
-    color: #8a5428; text-shadow: 0 1px 0 rgba(255,220,170,.55), 0 -1px 1px rgba(0,0,0,.45);
-    background: linear-gradient(#a86a37, #94592c); border-radius: 10px; padding: 8px 14px;
-    box-shadow: inset 0 2px 5px rgba(0,0,0,.5), 0 1px 0 rgba(255,220,170,.4);
-  }
-
-  /* green wooden buttons */
-  .wbtn {
-    border: 0; border-radius: 12px; padding: 14px 20px; min-width: 150px; font-weight: 800; font-size: 1.25rem;
-    letter-spacing: 1px; text-transform: uppercase; color: #ffee8a; text-shadow: 0 2px 2px rgba(0,0,0,.45);
-    background: linear-gradient(#6fb02b, #4a8a1c);
-    box-shadow: 0 0 0 4px #8a5428, 0 0 0 6px #5a3516, 0 5px 0 6px #3b200c, inset 0 2px 0 rgba(255,255,255,.35);
-    margin-bottom: 8px;
-  }
-  .wbtn:active { transform: translateY(3px); }
-  .wbtn:disabled { filter: grayscale(.8) brightness(.8); cursor: not-allowed; }
-  .wbtn.small { font-size: 1rem; min-width: 0; padding: 10px 16px; }
-  .wbtn.brown { background: linear-gradient(#b27a45, #8f5a2b); color: #ffe9c4; }
-  :focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+  :focus-visible { outline: 3px solid var(--link); outline-offset: 2px; }
+  .screen { width: 100%; max-width: 440px; margin: 0 auto; padding: 24px 16px 40px; text-align: center; }
 
   /* menu */
-  #menu { justify-content: center; gap: 22px; }
-  #menu h1 { margin: 0; font-size: 2.1rem; }
-  .bulb { font-size: 2.2rem; filter: drop-shadow(0 0 10px #ffe27a); }
-  .titlerow { display: flex; align-items: center; gap: 10px; }
-  .best { font-size: .95rem; color: #ffe9c4; text-shadow: 0 1px 2px #000; min-height: 1.2em; text-align: center; }
-  .menu-help { max-width: 320px; font-size: .9rem; text-align: center; line-height: 1.45; text-shadow: 0 1px 2px #000; }
+  #menu { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+  .logo { display: block; margin: 0 auto 12px; }
+  h1 { font-size: 26px; margin: 0 0 8px; }
+  .tagline { color: var(--muted); margin: 0 0 28px; }
+  .card { border: 1px solid var(--border); background: var(--panel); border-radius: 12px; padding: 20px; text-align: left; }
+  .card p { margin: 0; font-size: 14px; line-height: 1.6; }
+  .card p + p { margin-top: 10px; }
+  .menu-btns { display: flex; flex-direction: column; gap: 12px; align-items: center; margin-bottom: 24px; }
+  .best { color: var(--muted); font-size: 13px; margin: -8px 0 20px; min-height: 1.2em; }
+
+  /* pill buttons */
+  .pill {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: 999px;
+    padding: 12px 28px; background: var(--link); color: #fff; font-weight: 600; font-size: 15px;
+  }
+  .pill:hover { opacity: .9; }
+  .pill:disabled { opacity: .4; cursor: not-allowed; }
+  .pill.ghost { background: var(--panel); color: var(--fg); border: 1px solid var(--border); }
+  .menu-btns .pill { min-width: 180px; }
 
   /* game header */
-  .top { width: 100%; display: flex; align-items: center; gap: 10px; }
-  .scorebox { min-width: 74px; text-align: center; font-weight: 800; font-size: 1.3rem; padding: 4px 8px; }
-  .scorebox small { display: block; font-size: .65rem; letter-spacing: 2px; opacity: .8; }
-  .top .plaque { flex: 1; font-size: 1.15rem; }
-  .menubtn { width: 46px; height: 46px; border-radius: 10px; border: 0; font-weight: 900; font-size: 1.1rem;
-    background: linear-gradient(#a86a37, #94592c); box-shadow: inset 0 2px 5px rgba(0,0,0,.5); color: #8a5428; text-shadow: 0 1px 0 rgba(255,220,170,.55); }
+  .top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .top h2 { margin: 0; font-size: 18px; }
+  .iconbtn { border: 1px solid var(--border); background: var(--panel); border-radius: 999px; padding: 6px 14px; font-size: 13px; font-weight: 600; color: var(--muted); }
+  .scorebox { font-size: 13px; color: var(--muted); min-width: 70px; text-align: right; }
+  .scorebox b { color: var(--fg); font-size: 16px; }
 
-  /* rows */
-  .rows { display: flex; flex-direction: column; gap: 7px; width: 100%; align-items: center; }
-  .row { display: flex; align-items: center; gap: 8px; }
-  .num { width: 22px; text-align: right; font-weight: 800; font-size: 1.4rem; color: #8a5428; text-shadow: 0 1px 0 rgba(255,220,170,.5); }
-  .row.active .num { color: #ffe9a8; }
-  .hintbox {
-    display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px; width: 46px; padding: 6px; border-radius: 8px;
-    background: #94592c; box-shadow: inset 0 2px 5px rgba(0,0,0,.55), 0 1px 0 rgba(255,220,170,.35);
-  }
-  .hp { width: 100%; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(#2b1608, #55300f); box-shadow: inset 0 1px 2px #000; }
-  .hp.black { background: radial-gradient(circle at 35% 30%, #777 0 10%, #111 45%, #000); box-shadow: 0 1px 2px rgba(0,0,0,.7); }
-  .hp.white { background: radial-gradient(circle at 35% 30%, #fff 0 10%, #ddd 45%, #8a8a8a); box-shadow: 0 1px 2px rgba(0,0,0,.7); }
-  .strip {
-    display: flex; gap: 8px; padding: 6px 10px; border-radius: 999px;
-    background: linear-gradient(#a2642f, #9a5e2c); box-shadow: inset 0 2px 6px rgba(0,0,0,.45), 0 1px 0 rgba(255,220,170,.4);
-  }
-  .row.active .strip { box-shadow: inset 0 2px 6px rgba(0,0,0,.45), 0 0 0 3px #ffe27a; }
+  /* board */
+  .board { border: 1px solid var(--border); background: var(--panel); border-radius: 12px; padding: 12px; }
+  .rows { display: flex; flex-direction: column; gap: 6px; align-items: center; }
+  .row { display: flex; align-items: center; gap: 8px; padding: 4px 8px; border-radius: 10px; border: 1px solid transparent; }
+  .row.active { border-color: var(--link); background: var(--bg); }
+  .num { width: 20px; text-align: right; font-size: 13px; font-weight: 600; color: var(--muted); }
+  .hintbox { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; width: 34px; }
+  .hp { width: 100%; aspect-ratio: 1; border-radius: 50%; background: var(--hole); border: 1px solid var(--border); }
+  .hp.black { background: var(--peg-black); border-color: var(--peg-black); }
+  .hp.white { background: var(--peg-white); border-color: var(--muted); }
+  .strip { display: flex; gap: 8px; }
   .hole {
-    position: relative; width: var(--d); height: var(--d); border-radius: 50%; padding: 0; border: 0; display: block;
-    background: radial-gradient(circle at 50% 40%, #1f1006 0 38%, #5a3516 40% 62%, #8a5428 64%);
-    box-shadow: inset 0 3px 6px rgba(0,0,0,.7), 0 1px 0 rgba(255,220,170,.4);
+    position: relative; width: var(--d); height: var(--d); border-radius: 50%; padding: 0; display: block;
+    background: var(--hole); border: 1px solid var(--border);
   }
-  .hole.sel::before, .hole.sel::after { content: ""; position: absolute; left: 50%; margin-left: -5px; border: 5px solid transparent; }
-  .hole.sel::before { top: -13px; border-top: 7px solid #fff; border-bottom: 0; }
-  .hole.sel::after { bottom: -13px; border-bottom: 7px solid #fff; border-top: 0; }
-
-  /* marbles */
+  button.hole.sel { border: 2px solid var(--link); box-shadow: 0 0 0 3px color-mix(in srgb, var(--link) 25%, transparent); }
   .marble {
-    width: 100%; height: 100%; border-radius: 50%; display: block;
-    background: radial-gradient(circle at 34% 28%, #fff 0 7%, var(--c) 36%, var(--c2) 100%);
-    box-shadow: 0 3px 4px rgba(0,0,0,.55), inset 0 -3px 5px rgba(0,0,0,.25);
+    position: absolute; inset: -1px; border-radius: 50%; display: block;
+    background: radial-gradient(circle at 35% 30%, rgba(255,255,255,.55) 0 12%, transparent 13%), var(--c);
+    box-shadow: inset 0 -3px 4px rgba(0,0,0,.18), 0 1px 2px rgba(0,0,0,.25);
   }
-  .hole .marble { position: absolute; inset: 0; }
-  .covered {
-    width: 100%; height: 100%; border-radius: 50%; display: grid; place-items: center; font-weight: 900; color: #6e3f1b;
-    background: linear-gradient(#b9814d, #96602f); box-shadow: inset 0 2px 4px rgba(0,0,0,.45);
-  }
-  .secretrow .strip { background: linear-gradient(#7f4a22, #6a3c19); }
-  .secretrow .hole { background: transparent; box-shadow: none; }
-  .secretrow .num { font-size: 1.2rem; }
+  .covered { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-weight: 700; }
+  .secretrow { margin-bottom: 6px; padding-bottom: 10px; border-bottom: 1px dashed var(--border); border-radius: 0; }
+  .secretrow .num { font-size: 15px; }
   @media (prefers-reduced-motion: no-preference) {
-    .pop { animation: pop .35s ease-out; }
+    .pop { animation: pop .3s ease-out; }
     @keyframes pop { from { transform: scale(.4); } to { transform: scale(1); } }
   }
 
-  /* palette */
-  .tray { display: flex; gap: 10px; padding: 10px 14px; margin-top: 4px; border-radius: 999px; background: linear-gradient(#8e5528, #7d4a22);
-    box-shadow: inset 0 2px 6px rgba(0,0,0,.5), 0 1px 0 rgba(255,220,170,.4); }
-  .tray button { width: 44px; height: 44px; border-radius: 50%; padding: 0; border: 0; background: none; }
-  .tray button:active { transform: scale(.88); }
+  /* palette + actions */
+  .tray { display: flex; gap: 10px; justify-content: center; margin: 16px 0 14px; }
+  .tray button { position: relative; width: 44px; height: 44px; border-radius: 50%; padding: 0; border: 1px solid var(--border); background: var(--hole); }
+  .tray button:active { transform: scale(.9); }
   .actions { display: flex; gap: 10px; align-items: center; justify-content: center; flex-wrap: wrap; }
-  .bulbbtn { display: flex; align-items: center; gap: 6px; font-weight: 800; font-size: 1.1rem; background: linear-gradient(#a86a37, #94592c);
-    border: 0; border-radius: 12px; padding: 8px 12px; box-shadow: inset 0 2px 5px rgba(0,0,0,.5); }
-  .bulbbtn:disabled { opacity: .5; }
-  #msg { min-height: 2.8em; text-align: center; font-weight: 700; max-width: 360px; text-shadow: 0 1px 3px #000; line-height: 1.35; }
+  #msg { min-height: 3em; margin-top: 14px; color: var(--muted); font-size: 14px; }
 </style>
 </head>
 <body>
 
 <!-- Start screen -->
 <main class="screen" id="menu">
-  <div class="titlerow"><span class="bulb">💡</span><h1 class="plaque">Color Breaker</h1><span class="bulb">💡</span></div>
-  <div>
-    <button class="wbtn" data-mode="easy">Easy</button><br>
-    <button class="wbtn" data-mode="hard">Hard</button>
+  <svg class="logo" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <rect x="4" y="11" width="16" height="10" rx="2"/>
+    <path d="M8 11V7a4 4 0 0 1 8 0v4"/>
+  </svg>
+  <h1>Color Breaker</h1>
+  <p class="tagline">Crack the secret color code.</p>
+  <div class="menu-btns">
+    <button class="pill" data-mode="easy">Easy &rarr;</button>
+    <button class="pill" data-mode="hard">Hard &rarr;</button>
   </div>
   <div class="best" id="best"></div>
-  <p class="menu-help">Crack the secret color code! After each guess, a <b>black</b> peg means a right color in the right hole. A <b>white</b> peg means a right color in the wrong hole.</p>
+  <div class="card">
+    <p>Pick colors to make a guess. After each guess you get clues:</p>
+    <p><strong>Black peg</strong>: right color, right hole.<br><strong>White peg</strong>: right color, wrong hole.</p>
+    <p>Use the clues to crack the code before you run out of tries.</p>
+  </div>
 </main>
 
 <!-- Game screen -->
 <main class="screen hidden" id="game">
   <div class="top">
-    <div class="plaque scorebox"><small>SCORE</small><span id="score">0</span></div>
-    <div class="plaque" id="modeName">Easy</div>
-    <button class="menubtn" id="menuBtn" aria-label="Back to menu">II</button>
+    <button class="iconbtn" id="menuBtn" aria-label="Back to menu">&larr; Menu</button>
+    <h2 id="modeName">Easy</h2>
+    <div class="scorebox">Score <b id="score">0</b></div>
   </div>
-  <div class="rows" id="rows"></div>
+  <div class="board"><div class="rows" id="rows"></div></div>
   <div class="tray" id="tray" role="group" aria-label="Colors"></div>
   <div class="actions">
-    <button class="bulbbtn" id="bulb" aria-label="Use a hint"><span>💡</span> x<span id="bulbs">2</span></button>
-    <button class="wbtn small" id="check">Check</button>
+    <button class="pill ghost" id="bulb" aria-label="Use a hint">&#128161; <span>Hint (<span id="bulbs">2</span>)</span></button>
+    <button class="pill" id="check">Check</button>
   </div>
   <div id="msg" role="status"></div>
 </main>
@@ -194,7 +174,7 @@ else {
     get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
     set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
   };
-  const marble = (ci, extra = "") => `<span class="marble ${extra}" style="--c:${COLORS[ci].c};--c2:${COLORS[ci].c2}"></span>`;
+  const marble = (ci, extra = "") => `<span class="marble ${extra}" style="--c:${COLORS[ci].c}"></span>`;
 
   function showMenu() {
     $("game").classList.add("hidden"); $("menu").classList.remove("hidden");
@@ -230,7 +210,7 @@ else {
   }
 
   function render() {
-    let html = `<div class="row secretrow"><span class="num">🔒</span><div class="hintbox" style="visibility:hidden"></div><div class="strip">`;
+    let html = `<div class="row secretrow"><span class="num">?</span><div class="hintbox" style="visibility:hidden"><span class="hp"></span></div><div class="strip">`;
     for (let p = 0; p < m.pegs; p++) {
       const show = over || revealed.has(p);
       html += `<div class="hole">${show ? marble(secret[p], "pop") : `<span class="covered">?</span>`}</div>`;
@@ -280,10 +260,10 @@ else {
       const key = "cb-best-" + modeKey;
       if (total > (+store.get(key) || 0)) store.set(key, total);
       render();
-      say(`🎉 You cracked it in ${guesses.length} ${guesses.length === 1 ? "try" : "tries"}! +${Math.max(pts, 5)} points`);
+      say(`You cracked it in ${guesses.length} ${guesses.length === 1 ? "try" : "tries"}! +${Math.max(pts, 5)} points`);
     } else if (guesses.length >= m.tries) {
       over = true; render();
-      say("😮 Out of tries! The secret code is shown at the top. Try again!");
+      say("Out of tries! The secret code is shown at the top. Try again!");
     } else {
       render();
       say(`${r.exact} black, ${r.partial} white. Keep going!`);
@@ -297,7 +277,7 @@ else {
     const p = options[Math.floor(Math.random() * options.length)];
     revealed.add(p); bulbs--;
     render();
-    say(`💡 Hole ${p + 1} is ${COLORS[secret[p]].name}!`);
+    say(`Hint: hole ${p + 1} is ${COLORS[secret[p]].name}.`);
   }
 
   document.querySelectorAll("[data-mode]").forEach(b => b.onclick = () => start(b.dataset.mode));
