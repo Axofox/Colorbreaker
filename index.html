@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Color Breaker</title>
+<style>
+  :root {
+    --bg: #fff8e7; --ink: #2b2b3a; --card: #ffffff; --line: #e6dcc3; --accent: #6c5ce7;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; background: var(--bg); color: var(--ink);
+    font-family: "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
+    display: flex; flex-direction: column; align-items: center; padding: 16px;
+  }
+  h1 { margin: 4px 0; font-size: 2rem; letter-spacing: 1px; }
+  .sub { margin: 0 0 12px; text-align: center; }
+  .modes { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; justify-content: center; }
+  button { font: inherit; cursor: pointer; }
+  .mode, .btn {
+    border: 2px solid var(--ink); background: var(--card); color: var(--ink);
+    border-radius: 999px; padding: 8px 16px; font-weight: 700;
+  }
+  .mode[aria-pressed="true"] { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+  .board { width: 100%; max-width: 420px; background: var(--card); border: 2px solid var(--line); border-radius: 20px; padding: 12px; }
+  .secret, .row { display: flex; align-items: center; gap: 8px; padding: 6px; border-radius: 12px; }
+  .secret { background: #eee9ff; margin-bottom: 8px; }
+  .row.active { background: #fff3c4; outline: 2px solid #f2c200; }
+  .label { width: 28px; text-align: center; font-weight: 700; color: #8a8470; }
+  .pegs { display: flex; gap: 8px; flex: 1; }
+  .slot, .peg {
+    width: 44px; height: 44px; border-radius: 50%; border: 2px dashed var(--line);
+    display: grid; place-items: center; font-size: 1.4rem; font-weight: 900; color: #fff; padding: 0;
+  }
+  .slot.filled, .peg { border-style: solid; border-color: rgba(0,0,0,.25); }
+  .row.active .slot { cursor: pointer; background: #fffdf2; }
+  .row.active .slot.filled { background: var(--c); }
+  .hint { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; width: 54px; font-size: .8rem; line-height: 1; text-align: center; }
+  .hint span { height: 16px; }
+  .score { font-size: .8rem; font-weight: 700; min-width: 54px; text-align: right; }
+  .palette { display: flex; gap: 8px; margin: 14px 0 8px; flex-wrap: wrap; justify-content: center; }
+  .peg { cursor: pointer; background: var(--c); }
+  .peg:focus-visible, .slot:focus-visible, .btn:focus-visible, .mode:focus-visible { outline: 3px solid #000; outline-offset: 2px; }
+  .peg:active { transform: scale(.92); }
+  .actions { display: flex; gap: 8px; margin-bottom: 8px; }
+  #msg { min-height: 2.6em; text-align: center; font-weight: 700; max-width: 420px; }
+  details { max-width: 420px; margin-top: 8px; }
+  summary { cursor: pointer; font-weight: 700; }
+  @media (max-width: 380px) { .slot, .peg { width: 38px; height: 38px; } }
+  @media (prefers-reduced-motion: no-preference) {
+    .pop { animation: pop .3s ease-out; }
+    @keyframes pop { 0% { transform: scale(.6); } 100% { transform: scale(1); } }
+  }
+</style>
+</head>
+<body>
+  <h1>🔐 Color Breaker</h1>
+  <p class="sub">Crack the secret color code!</p>
+
+  <div class="modes" role="group" aria-label="Difficulty">
+    <button class="mode" data-mode="easy" aria-pressed="false">Easy</button>
+    <button class="mode" data-mode="normal" aria-pressed="true">Normal</button>
+    <button class="mode" data-mode="hard" aria-pressed="false">Hard</button>
+  </div>
+
+  <div class="board" id="board" aria-live="polite"></div>
+
+  <div class="palette" id="palette" role="group" aria-label="Colors"></div>
+  <div class="actions">
+    <button class="btn" id="undo">⬅ Undo</button>
+    <button class="btn primary" id="check">Check ✔</button>
+    <button class="btn" id="newgame">New game</button>
+  </div>
+  <div id="msg" role="status"></div>
+
+  <details>
+    <summary>How to play</summary>
+    <p>The computer hides a secret code of colors. Pick colors to make a guess, then press <b>Check</b>.</p>
+    <p>⭐ = right color in the <b>right spot</b><br>⚪ = right color in the <b>wrong spot</b></p>
+    <p>Use the clues to crack the code before you run out of tries!</p>
+    <p><b>Easy:</b> 4 spots, 5 colors, no repeats. <b>Normal:</b> 4 spots, 6 colors, repeats allowed. <b>Hard:</b> 5 spots, 6 colors, repeats allowed.</p>
+  </details>
+
+<script>
+// Colors each have a symbol too, so the game works for color-blind players.
+const COLORS = [
+  { name: "red",    hex: "#e63946", sym: "●" },
+  { name: "blue",   hex: "#1d6fe0", sym: "■" },
+  { name: "green",  hex: "#2a9d4b", sym: "▲" },
+  { name: "yellow", hex: "#e3a900", sym: "★" },
+  { name: "purple", hex: "#8e44ad", sym: "◆" },
+  { name: "orange", hex: "#f06a1d", sym: "♥" },
+];
+const MODES = {
+  easy:   { pegs: 4, colors: 5, repeats: false, tries: 10 },
+  normal: { pegs: 4, colors: 6, repeats: true,  tries: 10 },
+  hard:   { pegs: 5, colors: 6, repeats: true,  tries: 12 },
+};
+
+// Returns { exact, partial } for a guess against a secret (arrays of color indexes).
+function score(secret, guess) {
+  let exact = 0;
+  const s = [], g = [];
+  secret.forEach((c, i) => { if (c === guess[i]) exact++; else { s.push(c); g.push(guess[i]); } });
+  let partial = 0;
+  g.forEach(c => { const k = s.indexOf(c); if (k >= 0) { partial++; s.splice(k, 1); } });
+  return { exact, partial };
+}
+
+function makeSecret(m) {
+  const pool = [...Array(m.colors).keys()], out = [];
+  while (out.length < m.pegs) {
+    const i = Math.floor(Math.random() * pool.length);
+    out.push(pool[i]);
+    if (!m.repeats) pool.splice(i, 1);
+  }
+  return out;
+}
+
+if (typeof document === "undefined") { module.exports = { score, makeSecret, MODES }; }
+else {
+  const $ = id => document.getElementById(id);
+  let modeKey = "normal", m, secret, guesses, current, over;
+
+  function start() {
+    m = MODES[modeKey]; secret = makeSecret(m); guesses = []; current = []; over = false;
+    document.querySelectorAll(".mode").forEach(b => b.setAttribute("aria-pressed", b.dataset.mode === modeKey));
+    buildPalette(); render();
+    say("Pick " + m.pegs + " colors, then press Check!");
+  }
+  function say(t) { $("msg").textContent = t; }
+
+  function pegEl(ci, extra = "") {
+    const c = COLORS[ci];
+    return `<div class="peg ${extra}" style="--c:${c.hex};background:${c.hex}" title="${c.name}">${c.sym}</div>`;
+  }
+
+  function buildPalette() {
+    $("palette").innerHTML = COLORS.slice(0, m.colors).map((c, i) =>
+      `<button class="peg" style="--c:${c.hex}" data-c="${i}" aria-label="${c.name}">${c.sym}</button>`).join("");
+    $("palette").querySelectorAll("button").forEach(b => b.onclick = () => addColor(+b.dataset.c));
+  }
+
+  function render() {
+    let html = `<div class="secret"><span class="label">🔒</span><div class="pegs">` +
+      secret.map(ci => over ? pegEl(ci, "pop") : `<div class="peg" style="background:#b9b2d6;border-color:#9a93bd">?</div>`).join("") +
+      `</div></div>`;
+    for (let r = m.tries - 1; r >= 0; r--) {
+      const done = r < guesses.length, active = r === guesses.length && !over;
+      html += `<div class="row ${active ? "active" : ""}"><span class="label">${r + 1}</span><div class="pegs">`;
+      for (let p = 0; p < m.pegs; p++) {
+        const ci = done ? guesses[r][p] : active ? current[p] : undefined;
+        if (ci === undefined) {
+          html += `<div class="slot" ${active ? `tabindex="0" data-p="${p}" aria-label="empty spot"` : ""}></div>`;
+        } else {
+          const c = COLORS[ci];
+          html += `<div class="slot filled" style="--c:${c.hex};background:${c.hex}" ${active ? `tabindex="0" data-p="${p}" role="button" aria-label="${c.name}, tap to remove"` : ""}>${c.sym}</div>`;
+        }
+      }
+      html += `</div>`;
+      if (done) {
+        const { exact, partial } = score(secret, guesses[r]);
+        const h = "⭐".repeat(exact) + "⚪".repeat(partial);
+        html += `<div class="hint">${[...h].map(x => `<span>${x}</span>`).join("")}</div>`;
+      } else html += `<div class="hint"></div>`;
+      html += `</div>`;
+    }
+    $("board").innerHTML = html;
+    $("board").querySelectorAll(".row.active .slot").forEach(s => {
+      const rm = () => { current[+s.dataset.p] = undefined; trim(); render(); };
+      s.onclick = rm; s.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); rm(); } };
+    });
+    $("check").disabled = over || current.filter(x => x !== undefined).length < m.pegs;
+    $("undo").disabled = over || current.length === 0;
+  }
+  function trim() { while (current.length && current[current.length - 1] === undefined) current.pop(); }
+
+  function addColor(ci) {
+    if (over) return;
+    let p = 0; while (p < m.pegs && current[p] !== undefined) p++;
+    if (p >= m.pegs) return;
+    current[p] = ci; render();
+  }
+
+  function check() {
+    if (over || current.filter(x => x !== undefined).length < m.pegs) return;
+    const g = current.slice(0, m.pegs);
+    guesses.push(g); current = [];
+    const { exact } = score(secret, g);
+    if (exact === m.pegs) {
+      over = true; render();
+      say(`🎉 You cracked it in ${guesses.length} ${guesses.length === 1 ? "try" : "tries"}! Amazing!`);
+    } else if (guesses.length >= m.tries) {
+      over = true; render();
+      say("😮 Out of tries! The secret code is shown at the top. Try again!");
+    } else {
+      render();
+      const r = score(secret, g);
+      say(`⭐ ${r.exact} right spot · ⚪ ${r.partial} wrong spot. Keep going!`);
+    }
+  }
+
+  $("check").onclick = check;
+  $("undo").onclick = () => { current.pop(); trim(); render(); };
+  $("newgame").onclick = start;
+  document.querySelectorAll(".mode").forEach(b => b.onclick = () => { modeKey = b.dataset.mode; start(); });
+  start();
+}
+</script>
+</body>
+</html>
