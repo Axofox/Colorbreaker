@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2563eb">
+<title>Color Pop</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #ffffff; --fg: #1b1b1f; --muted: #6b7280; --border: #e5e7eb; --panel: #f9fafb; --link: #2563eb;
+    --cell: 44px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #14151a; --fg: #e7e7ea; --muted: #9aa0aa; --border: #2a2b32; --panel: #1b1c22; --link: #7db4ff; }
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow: hidden; overscroll-behavior: none; touch-action: manipulation; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+  }
+  button { font: inherit; cursor: pointer; color: inherit; }
+  .hidden { display: none !important; }
+  :focus-visible { outline: 3px solid var(--link); outline-offset: 2px; }
+  .screen {
+    width: 100%; max-width: 440px; height: 100vh; height: 100dvh; margin: 0 auto; text-align: center;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); overflow: hidden; display: flex; flex-direction: column;
+  }
+  #menu { justify-content: center; align-items: center; }
+  .logo { display: block; margin: 0 auto 12px; }
+  h1 { font-size: 26px; margin: 0 0 8px; }
+  .tagline { color: var(--muted); margin: 0 0 28px; }
+  .menu-btns { display: flex; flex-direction: column; gap: 12px; align-items: center; margin-bottom: 20px; }
+  .card { border: 1px solid var(--border); background: var(--panel); border-radius: 12px; padding: 20px; text-align: left; }
+  .card p { margin: 0; font-size: 14px; line-height: 1.6; }
+  .card p + p { margin-top: 10px; }
+  .best { color: var(--muted); font-size: 13px; margin: -4px 0 16px; min-height: 1.2em; }
+  .back { margin-top: 16px; color: var(--muted); font-size: 14px; text-decoration: none; }
+  .pill {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: 999px;
+    padding: 12px 28px; background: var(--link); color: #fff; font-weight: 600; font-size: 15px;
+  }
+  .pill:disabled { opacity: .4; cursor: not-allowed; }
+  .pill.ghost { background: var(--panel); color: var(--fg); border: 1px solid var(--border); }
+  .menu-btns .pill { min-width: 180px; }
+
+  .top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .top h2 { margin: 0; font-size: 18px; }
+  .iconbtn { border: 1px solid var(--border); background: var(--panel); border-radius: 999px; padding: 6px 14px; font-size: 13px; font-weight: 600; color: var(--muted); }
+  .scorebox { font-size: 13px; color: var(--muted); min-width: 70px; text-align: right; }
+  .scorebox b { color: var(--fg); font-size: 16px; }
+  .status { display: flex; justify-content: center; gap: 16px; margin-bottom: 10px; font-size: 14px; color: var(--muted); }
+  .status b { color: var(--fg); }
+
+  .board { flex: 1 1 0; min-height: 0; overflow: hidden; display: flex; align-items: center; justify-content: center;
+    border: 1px solid var(--border); background: var(--panel); border-radius: 12px; padding: 8px; }
+  .field { position: relative; }
+  .sq {
+    position: absolute; left: 0; top: 0; width: var(--cell); height: var(--cell); padding: 0; border: 0;
+    background: transparent; touch-action: manipulation;
+  }
+  .sq::before {
+    content: ""; position: absolute; inset: 2px; border-radius: 22%; background: var(--c);
+    box-shadow: inset 0 -3px 0 rgba(0,0,0,.16);
+  }
+  .sq.hint::before { box-shadow: 0 0 0 3px var(--bg), 0 0 0 6px var(--fg); }
+  .sq.gone { opacity: 0; transform: var(--at) scale(.2) !important; pointer-events: none; }
+  @media (prefers-reduced-motion: no-preference) {
+    .sq { transition: transform .28s cubic-bezier(.3,.7,.4,1), opacity .18s; }
+    .sq.gone { transition: transform .18s ease-in, opacity .18s ease-in; }
+    .sq.hint::before { animation: pulse 1s ease-in-out infinite; }
+    @keyframes pulse { 50% { transform: scale(.88); } }
+    .sq.nope::before { animation: shake .3s; }
+    @keyframes shake { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+  }
+
+  .actions { display: flex; gap: 10px; justify-content: center; margin-top: 10px; }
+  #msg { min-height: 2.8em; margin-top: 8px; color: var(--muted); font-size: 14px; line-height: 1.4; }
+  #boom { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; }
+
+  #rotate { display: none; position: fixed; inset: 0; z-index: 10; background: var(--bg); color: var(--muted); align-items: center; justify-content: center; text-align: center; }
+  @media (orientation: landscape) and (pointer: coarse) { #rotate { display: flex; } .screen { display: none; } }
+</style>
+</head>
+<body>
+
+<main class="screen" id="menu">
+  <svg class="logo" width="56" height="56" viewBox="0 0 32 32" aria-hidden="true">
+    <rect x="1" y="1" width="9" height="9" rx="2.5" fill="#2f6fe8"/><rect x="11.5" y="1" width="9" height="9" rx="2.5" fill="#2f6fe8"/><rect x="22" y="1" width="9" height="9" rx="2.5" fill="#e23a2e"/>
+    <rect x="1" y="11.5" width="9" height="9" rx="2.5" fill="#3bc14f"/><rect x="11.5" y="11.5" width="9" height="9" rx="2.5" fill="#f2b705"/><rect x="22" y="11.5" width="9" height="9" rx="2.5" fill="#e23a2e"/>
+    <rect x="1" y="22" width="9" height="9" rx="2.5" fill="#3bc14f"/><rect x="11.5" y="22" width="9" height="9" rx="2.5" fill="#9b51e0"/><rect x="22" y="22" width="9" height="9" rx="2.5" fill="#9b51e0"/>
+  </svg>
+  <h1>Color Pop</h1>
+  <p class="tagline">Pop every square off the board.</p>
+  <div class="menu-btns">
+    <button class="pill" data-mode="easy">Easy &rarr;</button>
+    <button class="pill" data-mode="hard">Hard &rarr;</button>
+  </div>
+  <div class="best" id="best"></div>
+  <div class="card">
+    <p>Tap two or more squares of the <strong>same color</strong> that touch to pop them. A square on its own can't pop.</p>
+    <p>Squares fall down to fill the gaps. Bigger groups give more points. Clear the whole board for a big bonus!</p>
+    <p>Every board can be cleared. You get <strong>2 hints</strong> per board.</p>
+  </div>
+  <a class="back" href="../index.html">&larr; All games</a>
+</main>
+
+<main class="screen hidden" id="game">
+  <div class="top">
+    <button class="iconbtn" id="menuBtn" aria-label="Back to menu">&larr; Menu</button>
+    <h2 id="modeName">Easy</h2>
+    <div class="scorebox">Score <b id="score">0</b></div>
+  </div>
+  <div class="status"><span>Left <b id="left">0</b></span><span>Best <b id="bestNow">0</b></span></div>
+  <div class="board"><div class="field" id="field" role="group" aria-label="Board"></div></div>
+  <div class="actions">
+    <button class="pill ghost" id="hint">&#128161; <span>Hint (<span id="hints">2</span>)</span></button>
+    <button class="pill hidden" id="again">New board</button>
+  </div>
+  <div id="msg" role="status"></div>
+</main>
+
+<canvas id="boom" aria-hidden="true"></canvas>
+
+<div id="rotate" role="alert"><div><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg><p>Turn your phone upright to play.</p></div></div>
+
+<script>
+const COLORS = {
+  r: { name: "red",    c: "#e23a2e" },
+  y: { name: "yellow", c: "#f2b705" },
+  g: { name: "green",  c: "#3bc14f" },
+  b: { name: "blue",   c: "#2f6fe8" },
+  p: { name: "purple", c: "#9b51e0" },
+};
+const KEYS = Object.keys(COLORS);
+// sizes: how big the groups are that the board is built from (repeated = more likely).
+const MODES = {
+  easy: { label: "Easy", w: 6, h: 8,  sizes: [2, 2, 3, 3, 4], bonus: 500 },
+  hard: { label: "Hard", w: 8, h: 12, sizes: [2, 2, 2, 3],    bonus: 1000 },
+};
+const MAX_HINTS = 2;
+
+// A board is a list of columns, left to right. Each column lists its colors from the bottom up.
+// Empty columns are removed, so the squares slide left to close the gap.
+const key = cols => cols.map(c => c.join("")).join("|");
+const at = (cols, x, y) => (cols[x] && cols[x][y]) || null;
+const points = n => n * (n - 1);
+
+// All squares of the same color touching (x, y), including it. Up, down, left and right count; corners don't.
+function group(cols, x, y) {
+  const c = at(cols, x, y);
+  if (!c) return [];
+  const seen = new Set([x + "," + y]), out = [[x, y]];
+  for (let i = 0; i < out.length; i++) {
+    const [cx, cy] = out[i];
+    for (const [nx, ny] of [[cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1]]) {
+      const k = nx + "," + ny;
+      if (!seen.has(k) && at(cols, nx, ny) === c) { seen.add(k); out.push([nx, ny]); }
+    }
+  }
+  return out;
+}
+
+// Every group of 2 or more, each listed once.
+function groups(cols) {
+  const seen = new Set(), out = [];
+  cols.forEach((col, x) => col.forEach((_, y) => {
+    if (seen.has(x + "," + y)) return;
+    const g = group(cols, x, y);
+    g.forEach(([a, b]) => seen.add(a + "," + b));
+    if (g.length >= 2) out.push(g);
+  }));
+  return out;
+}
+
+// Removes the squares; the ones above fall down and empty columns close up.
+function pop(cols, cells) {
+  const gone = new Set(cells.map(([x, y]) => x + "," + y));
+  return cols.map((col, x) => col.filter((_, y) => !gone.has(x + "," + y))).filter(col => col.length);
+}
+
+// Builds a full board that can always be cleared, by running a game backwards: start empty and keep
+// putting groups back in. Each group is 2-4 squares that don't touch another square of their color,
+// so popping it later gives exactly the board from before. The steps reversed are a way to clear it.
+function generate(mode, rnd = Math.random) {
+  const M = MODES[mode], W = M.w, H = M.h;
+  const pick = a => a[Math.floor(rnd() * a.length)];
+  const insert = (col, y, c, k) => col.slice(0, y).concat(Array(k).fill(c), col.slice(y));
+  for (let attempt = 0; attempt < 5000; attempt++) {
+    let cols = [], total = 0, stuck = 0;
+    const steps = [];
+    while (total < W * H && stuck < 200) {
+      const c = pick(KEYS), r = rnd();
+      let next = null, cell = null, k = 0;
+      // Fill the shortest columns first, so the board ends up as an even rectangle.
+      const room = cols.map(col => H - col.length);
+      const weighted = []; room.forEach((n, x) => { for (let i = 0; i < n * n; i++) weighted.push(x); });
+      if (cols.length < W && (r < 0.25 || !cols.length || !weighted.length)) {
+        // a new column, made of one upright group
+        k = Math.min(pick(M.sizes), H);
+        const x = Math.floor(rnd() * (cols.length + 1));
+        next = cols.slice(0, x).concat([Array(k).fill(c)], cols.slice(x));
+        cell = [x, 0];
+      } else if (weighted.length && r < 0.6) {
+        // an upright group slid into one column
+        const x = pick(weighted), col = cols[x];
+        k = Math.min(pick(M.sizes), H - col.length);
+        if (k < 2) { stuck++; continue; }
+        const y = Math.floor(rnd() * (col.length + 1));
+        next = cols.slice(); next[x] = insert(col, y, c, k);
+        cell = [x, y];
+      } else if (weighted.length && cols.length >= 2) {
+        // a flat group: one square slid into each of 2 or 3 side-by-side columns, at the same height
+        const wide = Math.min(cols.length, rnd() < 0.3 ? 3 : 2), x = pick(weighted);
+        const x0 = Math.max(0, Math.min(x - Math.floor(rnd() * wide), cols.length - wide));
+        const span = cols.slice(x0, x0 + wide);
+        if (span.some(col => col.length >= H)) { stuck++; continue; }
+        const y = Math.floor(rnd() * (Math.min(...span.map(col => col.length)) + 1));
+        next = cols.slice();
+        for (let i = 0; i < wide; i++) next[x0 + i] = insert(cols[x0 + i], y, c, 1);
+        k = wide; cell = [x0, y];
+      } else { stuck++; continue; }
+      if (next.length > W || group(next, cell[0], cell[1]).length !== k) { stuck++; continue; }
+      cols = next; total += k; stuck = 0;
+      steps.push({ cell, board: key(cols) });
+    }
+    if (total !== W * H || cols.length !== W || cols.some(col => col.length !== H)) continue;
+    // plan[i] = the board before move i, and the square to tap
+    const plan = steps.reverse();
+    return { mode, w: W, h: H, cols, plan };
+  }
+  throw new Error("could not build a board");
+}
+
+// Looks for a way to clear the board from here. Returns the first square to tap, null if there is
+// no way, or undefined if it ran out of time looking.
+function solve(cols, limit = 20000) {
+  const seen = new Set(); let nodes = 0;
+  const dead = cols => { const n = {}; cols.forEach(col => col.forEach(c => { n[c] = (n[c] || 0) + 1; })); return Object.values(n).some(v => v === 1); };
+  function dfs(cols) {
+    if (!cols.length) return true;
+    if (++nodes > limit) throw "stop";
+    const k = key(cols);
+    if (seen.has(k) || dead(cols)) return false;
+    seen.add(k);
+    for (const g of groups(cols).sort((a, b) => a.length - b.length)) if (dfs(pop(cols, g))) return g[0];
+    return false;
+  }
+  try { const r = dfs(cols); return r === true ? null : r || null; } catch (e) { return undefined; }
+}
+
+if (typeof document === "undefined") { module.exports = { COLORS, MODES, group, groups, pop, generate, solve, points, key }; }
+else {
+  const $ = id => document.getElementById(id);
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
+  };
+  let mode, M, board, cols, ids, score, hints, over, busy, hinted = [], nextId = 0;
+  const els = new Map();
+  window.__colorpop = () => ({ cols, plan: board && board.plan, score, hints, over, busy });
+
+  const say = t => { $("msg").textContent = t; };
+  const best = () => +store.get("cp-best-" + mode) || 0;
+  const left = () => cols.reduce((n, col) => n + col.length, 0);
+
+  function showMenu() {
+    stopBoom();
+    $("game").classList.add("hidden"); $("menu").classList.remove("hidden");
+    const parts = Object.keys(MODES).map(k => [MODES[k].label, +store.get("cp-best-" + k) || 0]);
+    const cleared = +store.get("cp-cleared") || 0;
+    $("best").textContent = parts.some(p => p[1]) ? "High scores: " + parts.map(p => p[0] + " " + p[1]).join(" · ") + (cleared ? ` · Boards cleared ${cleared}` : "") : "";
+  }
+
+  function start(m) {
+    mode = m; M = MODES[m];
+    $("menu").classList.add("hidden"); $("game").classList.remove("hidden");
+    $("modeName").textContent = M.label;
+    newBoard();
+  }
+
+  function newBoard() {
+    stopBoom();
+    board = generate(mode);
+    cols = board.cols;
+    ids = cols.map(col => col.map(() => nextId++));
+    score = 0; hints = MAX_HINTS; over = false; busy = false; hinted = [];
+    $("field").innerHTML = ""; els.clear();
+    $("again").classList.add("hidden");
+    fit(); render();
+    say("Tap two or more touching squares of the same color.");
+  }
+
+  function render() {
+    const field = $("field"), seen = new Set();
+    cols.forEach((col, x) => col.forEach((c, y) => {
+      const id = ids[x][y]; seen.add(id);
+      let el = els.get(id);
+      if (!el) {
+        el = document.createElement("button");
+        el.className = "sq"; el.style.setProperty("--c", COLORS[c].c);
+        el.setAttribute("aria-label", COLORS[c].name);
+        field.appendChild(el); els.set(id, el);
+      }
+      el.dataset.x = x; el.dataset.y = y;
+      const pos = `translate(calc(var(--cell) * ${x}), calc(var(--cell) * ${M.h - 1 - y}))`;
+      el.style.setProperty("--at", pos); el.style.transform = pos;
+    }));
+    for (const [id, el] of els) if (!seen.has(id) && !el.classList.contains("gone")) { el.remove(); els.delete(id); }
+    $("score").textContent = score;
+    $("left").textContent = left();
+    $("bestNow").textContent = Math.max(best(), score);
+    $("hints").textContent = hints;
+    $("hint").disabled = over || hints <= 0;
+  }
+
+  function clearHint() { hinted.forEach(([x, y]) => { const el = els.get(ids[x] && ids[x][y]); if (el) el.classList.remove("hint"); }); hinted = []; }
+
+  function tap(x, y) {
+    if (over || busy) return;
+    const g = group(cols, x, y);
+    if (g.length < 2) {
+      const el = els.get(ids[x][y]);
+      el.classList.remove("nope"); void el.offsetWidth; el.classList.add("nope");
+      say("A square on its own can't pop. Find two or more that touch.");
+      return;
+    }
+    clearHint();
+    busy = true;
+    const name = COLORS[cols[x][y]].name;
+    g.forEach(([gx, gy]) => els.get(ids[gx][gy]).classList.add("gone"));
+    const gained = points(g.length);
+    score += gained;
+    const gone = new Set(g.map(([a, b]) => a + "," + b));
+    const removed = g.map(([gx, gy]) => ids[gx][gy]);
+    cols = pop(cols, g);
+    ids = ids.map((col, cx) => col.filter((_, cy) => !gone.has(cx + "," + cy))).filter(col => col.length);
+    render();
+    say(`+${gained} for ${g.length} ${name} squares.`);
+    setTimeout(() => {
+      removed.forEach(id => { const el = els.get(id); if (el) el.remove(); els.delete(id); });
+      busy = false;
+      checkEnd();
+    }, 190);
+  }
+
+  function checkEnd() {
+    if (!cols.length) {
+      over = true; score += M.bonus;
+      store.set("cp-cleared", (+store.get("cp-cleared") || 0) + 1);
+      saveBest(); render();
+      say(`You cleared the board! +${M.bonus} bonus. Score ${score}.`);
+      boom();
+    } else if (!groups(cols).length) {
+      over = true; saveBest(); render();
+      say(`No more pairs. ${left()} ${left() === 1 ? "square" : "squares"} left. Score ${score}.`);
+    } else return;
+    $("again").classList.remove("hidden");
+  }
+  function saveBest() {
+    if (score > best()) { store.set("cp-best-" + mode, score); return true; }
+    return false;
+  }
+
+  // A hint shows a group to pop that still lets you clear the whole board.
+  function hint() {
+    if (over || busy || hints <= 0) return;
+    clearHint();
+    const k = key(cols), step = board.plan.find(s => s.board === k);
+    let cell = step ? step.cell : solve(cols), text = "Hint: pop this group.";
+    if (!cell) {
+      // No known way to clear it (null), or it took too long to look (undefined): show the biggest group.
+      text = cell === null ? "This board can't be fully cleared anymore. Try the biggest group." : "Hint: try this big group.";
+      cell = groups(cols).sort((a, b) => b.length - a.length)[0][0];
+    }
+    hints--;
+    hinted = group(cols, cell[0], cell[1]);
+    hinted.forEach(([x, y]) => els.get(ids[x][y]).classList.add("hint"));
+    render();
+    say(text);
+  }
+
+  // Size the squares so the whole board fits with no scrolling.
+  function fit() {
+    if (!M || $("game").classList.contains("hidden")) return;
+    const box = $("field").parentElement;
+    const size = Math.max(18, Math.min(60, Math.floor((box.clientWidth - 18) / M.w), Math.floor((box.clientHeight - 18) / M.h)));
+    document.documentElement.style.setProperty("--cell", size + "px");
+    $("field").style.width = size * M.w + "px"; $("field").style.height = size * M.h + "px";
+  }
+
+  // The explosion when the board is cleared: colored squares burst out from the middle of the board.
+  let raf = 0;
+  function stopBoom() { cancelAnimationFrame(raf); const cv = $("boom"); cv.getContext("2d").clearRect(0, 0, cv.width, cv.height); }
+  function boom() {
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const cv = $("boom"), dpr = window.devicePixelRatio || 1;
+    cv.width = innerWidth * dpr; cv.height = innerHeight * dpr;
+    const ctx = cv.getContext("2d"); ctx.scale(dpr, dpr);
+    const r = $("field").getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    const hues = KEYS.map(k => COLORS[k].c), parts = [];
+    for (let wave = 0; wave < 3; wave++) for (let i = 0; i < 70; i++) {
+      const a = Math.random() * Math.PI * 2, v = 4 + Math.random() * 9;
+      parts.push({ x: cx, y: cy, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 3, s: 6 + Math.random() * 12,
+        rot: Math.random() * 6, vr: (Math.random() - .5) * .4, c: hues[i % hues.length], delay: wave * 18 });
+    }
+    let t = 0;
+    const frame = () => {
+      t++;
+      ctx.clearRect(0, 0, innerWidth, innerHeight);
+      if (t < 14) { // a bright flash ring
+        ctx.beginPath(); ctx.arc(cx, cy, t * 14, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255,220,80,${0.5 - t / 30})`; ctx.fill();
+      }
+      let alive = false;
+      for (const p of parts) {
+        if (t < p.delay) { alive = true; continue; }
+        p.vy += 0.25; p.vx *= 0.985; p.x += p.vx; p.y += p.vy; p.rot += p.vr;
+        const life = 1 - (t - p.delay) / 110;
+        if (life <= 0 || p.y > innerHeight + 40) continue;
+        alive = true;
+        ctx.save(); ctx.globalAlpha = Math.min(1, life * 1.5); ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+        ctx.fillStyle = p.c; ctx.beginPath(); ctx.roundRect(-p.s / 2, -p.s / 2, p.s, p.s, p.s * .22); ctx.fill(); ctx.restore();
+      }
+      if (alive) raf = requestAnimationFrame(frame); else ctx.clearRect(0, 0, innerWidth, innerHeight);
+    };
+    raf = requestAnimationFrame(frame);
+  }
+
+  $("field").addEventListener("click", e => {
+    const b = e.target.closest(".sq");
+    if (!b || b.classList.contains("gone")) return;
+    tap(+b.dataset.x, +b.dataset.y);
+  });
+  document.querySelectorAll("[data-mode]").forEach(b => b.onclick = () => start(b.dataset.mode));
+  $("menuBtn").onclick = showMenu;
+  $("hint").onclick = hint;
+  $("again").onclick = newBoard;
+  window.addEventListener("resize", () => { fit(); });
+  window.addEventListener("orientationchange", fit);
+  try { screen.orientation.lock("portrait").catch(() => {}); } catch (e) {}
+  showMenu();
+}
+</script>
+</body>
+</html>
