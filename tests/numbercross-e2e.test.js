@@ -124,6 +124,85 @@ test('hints: fill the selected box correctly, 2 per puzzle', { skip }, async () 
   await done(p);
 });
 
+// Drags from the middle of one element to the middle of another with real pointer events.
+async function dragTo(p, from, to) {
+  const a = await from.boundingBox(), b = to ? await to.boundingBox() : { x: 5, y: 5, width: 2, height: 2 };
+  await p.mouse.move(a.x + a.width / 2, a.y + a.height / 2);
+  await p.mouse.down();
+  await p.mouse.move(a.x + a.width / 2 + 12, a.y + a.height / 2 - 12, { steps: 2 });
+  await p.mouse.move(b.x + b.width / 2, b.y + b.height / 2, { steps: 6 });
+  await p.mouse.up();
+}
+
+test('drag and drop: the right number dropped on a box stays there', { skip }, async () => {
+  const p = await open();
+  await p.click('[data-level=medium]');
+  const s = await state(p), n = s.blanks;
+  // drop on the LAST empty box, not the selected one, to prove the drop target is what counts
+  const lastIdx = await p.locator('.c.blank').last().getAttribute('data-i');
+  const answer = await p.evaluate(i => window.__numbercross().puzzle.cells[i].v, +lastIdx);
+  const ti = s.tiles.find(t => t.v === answer).i;
+  await dragTo(p, p.locator(`.tile[data-t="${ti}"]`), p.locator(`.c.blank[data-i="${lastIdx}"]`));
+  assert.equal(await p.locator('.c.done').count(), 1);
+  assert.equal(await p.locator(`.c.done[data-f="${lastIdx}"]`).count(), 1);
+  assert.equal(await p.locator('.tile').count(), n - 1);
+  assert.equal(await p.textContent('#tries'), '3');
+  assert.equal(await p.locator('.dragcopy').count(), 0, 'the dragged copy is gone');
+  await done(p);
+});
+
+test('drag and drop: a wrong number costs a try and goes back', { skip }, async () => {
+  const p = await open();
+  await startWithWrongTile(p, 'easy');
+  const s = await state(p), n = s.blanks;
+  const t = s.tiles.find(t => t.v !== s.answer);
+  await dragTo(p, p.locator(`.tile[data-t="${t.i}"]`), p.locator('.c.blank.sel'));
+  assert.equal(await p.textContent('#tries'), '2');
+  assert.equal(await p.locator('.tile').count(), n);
+  await done(p);
+});
+
+test('drag and drop: dropping a number outside any box changes nothing', { skip }, async () => {
+  const p = await open();
+  await p.click('[data-level=easy]');
+  const n = (await state(p)).blanks;
+  await dragTo(p, p.locator('.tile').first(), null);
+  assert.equal(await p.textContent('#tries'), '3');
+  assert.equal(await p.locator('.tile').count(), n);
+  assert.equal(await p.locator('.c.blank').count(), n);
+  await done(p);
+});
+
+test('take back: tapping a placed number returns it and it can be placed again', { skip }, async () => {
+  const p = await open();
+  await p.click('[data-level=medium]');
+  const n = (await state(p)).blanks;
+  await right(p);
+  assert.equal(await p.locator('.tile').count(), n - 1);
+  await p.click('button.c.done');
+  assert.equal(await p.locator('.tile').count(), n);
+  assert.equal(await p.locator('.c.done').count(), 0);
+  assert.equal(await p.locator('.c.blank').count(), n);
+  assert.match(await p.textContent('#msg'), /is back/);
+  assert.equal(await p.textContent('#tries'), '3');
+  for (let i = 0; i < n; i++) await right(p);
+  assert.match(await p.textContent('#msg'), /Great job/);
+  assert.equal(await p.locator('button.c.done').count(), 0, 'nothing can be taken back after winning');
+  await done(p);
+});
+
+test('take back: dragging a placed number away returns it', { skip }, async () => {
+  const p = await open();
+  await p.click('[data-level=medium]');
+  const n = (await state(p)).blanks;
+  await right(p);
+  await dragTo(p, p.locator('button.c.done'), p.locator('#tray'));
+  assert.equal(await p.locator('.tile').count(), n);
+  assert.equal(await p.locator('.c.done').count(), 0);
+  assert.equal(await p.textContent('#tries'), '3');
+  await done(p);
+});
+
 test('tapping another empty box selects it', { skip }, async () => {
   const p = await open();
   await p.click('[data-level=medium]');

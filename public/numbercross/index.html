@@ -75,7 +75,11 @@
   .tray { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 10px 0 8px; min-height: 52px; }
   .tile { width: 52px; height: 52px; border-radius: 10px; border: 2px solid var(--ok); background: color-mix(in srgb, var(--ok) 12%, var(--bg));
     color: var(--ok); font-weight: 800; font-size: 22px; padding: 0; }
+  .tile { touch-action: none; user-select: none; -webkit-user-select: none; }
   .tile:active { transform: scale(.92); }
+  .dragcopy { position: fixed; z-index: 20; pointer-events: none; margin: 0; transform: scale(1.15); box-shadow: 0 6px 16px rgba(0,0,0,.25); }
+  .c.blank.over { border: 2px solid var(--ok); background: color-mix(in srgb, var(--ok) 15%, var(--bg)); }
+  button.c.done { touch-action: none; user-select: none; -webkit-user-select: none; }
   .tile:disabled { opacity: .5; }
   .actions { display: flex; gap: 10px; justify-content: center; }
   #msg { min-height: 2.8em; margin-top: 8px; color: var(--muted); font-size: 14px; line-height: 1.4; }
@@ -99,7 +103,7 @@
   </div>
   <div class="best" id="best"></div>
   <div class="card">
-    <p>Tap an empty box, then tap the number that goes there.</p>
+    <p>Drag a number into an empty box. Or tap the box, then tap the number. Tap a green number to take it back.</p>
     <p>You have <strong>3 tries</strong>. After 3 wrong numbers you get a new puzzle. You also get <strong>2 hints</strong>.</p>
     <p><strong>Easy</strong>: plus and minus up to 10. <strong>Medium</strong>: up to 20. <strong>Hard</strong>: up to 30, with times 2 and divide by 2.</p>
   </div>
@@ -263,11 +267,16 @@ else {
       const pos = `grid-column:${c.x + 1};grid-row:${c.y + 1}`;
       if (c.t === "op") return `<div class="c op" style="${pos}">${c.v === "-" ? "&minus;" : c.v}</div>`;
       if (c.blank && !c.filled) return `<button class="c num blank ${i === sel ? "sel" : ""}" data-i="${i}" style="${pos}" aria-label="empty box"></button>`;
+      if (c.filled && !locked) return `<button class="c num done" data-f="${i}" style="${pos}" aria-label="${c.v}, tap to take it back">${c.v}</button>`;
       return `<div class="c num ${c.filled ? "done" : ""}" style="${pos}">${c.v}</div>`;
     }).join("");
-    g.querySelectorAll("button").forEach(b => b.onclick = () => { if (!locked) { sel = +b.dataset.i; render(); } });
+    g.querySelectorAll("button.blank").forEach(b => b.onclick = () => { if (!locked) { sel = +b.dataset.i; render(); } });
+    g.querySelectorAll("button.done").forEach(b => {
+      b.onpointerdown = e => startDrag(e, { ci: +b.dataset.f });
+      b.onclick = () => { if (!justDragged) takeBack(+b.dataset.f); };
+    });
     $("tray").innerHTML = tiles.map((t, i) => t.used ? "" : `<button class="tile" data-t="${i}">${t.v}</button>`).join("");
-    $("tray").querySelectorAll("button").forEach(b => { b.disabled = locked; b.onclick = () => place(+b.dataset.t); });
+    $("tray").querySelectorAll("button").forEach(b => { b.disabled = locked; b.onpointerdown = e => startDrag(e, { ti: +b.dataset.t }); b.onclick = () => { if (!justDragged) place(+b.dataset.t); }; });
     const left = MAX_TRIES - mistakes;
     $("tries").textContent = left;
     $("dots").innerHTML = Array.from({ length: MAX_TRIES }, (_, i) => `<span class="dot ${i < left ? "" : "used"}"></span>`).join(" ");
@@ -278,7 +287,7 @@ else {
   }
 
   function fill(cell, tile) {
-    cell.filled = true; tile.used = true;
+    cell.filled = true; cell.tile = tiles.indexOf(tile); tile.used = true;
     const rest = blanksLeft();
     sel = rest.length ? puzzle.cells.indexOf(rest[0]) : -1;
     if (!rest.length) {
@@ -294,7 +303,66 @@ else {
     return false;
   }
 
-  function place(ti) {
+  // Take a placed number out of its box and put it back with the other numbers.
+  function takeBack(ci, quiet) {
+    if (locked) return;
+    const cell = puzzle.cells[ci];
+    if (!cell.filled) return;
+    cell.filled = false; tiles[cell.tile].used = false; sel = ci;
+    if (!quiet) { render(); say(cell.v + " is back with the numbers."); }
+  }
+
+  // Drag and drop: drag a number onto an empty box, or drag a placed number away to take it back.
+  let drag = null, justDragged = false;
+  function startDrag(e, src) {
+    if (locked) return;
+    drag = { src, x: e.clientX, y: e.clientY, moved: false, ghost: null, el: e.currentTarget };
+  }
+  function dropTarget(e) {
+    const el = document.elementFromPoint(e.clientX, e.clientY), b = el && el.closest(".c.blank");
+    return b ? +b.dataset.i : null;
+  }
+  function endDrag() {
+    const d = drag; drag = null;
+    if (d && d.ghost) d.ghost.remove();
+    document.querySelectorAll(".c.over").forEach(c => c.classList.remove("over"));
+    return d;
+  }
+  window.addEventListener("pointermove", e => {
+    if (!drag) return;
+    if (!drag.moved) {
+      if (Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 8) return;
+      drag.moved = true;
+      const g = document.createElement("div");
+      g.className = "tile dragcopy"; g.textContent = drag.el.textContent;
+      g.style.display = "grid"; g.style.placeItems = "center";
+      document.body.appendChild(g); drag.ghost = g;
+      drag.el.style.opacity = ".3";
+    }
+    drag.ghost.style.left = (e.clientX - 26) + "px"; drag.ghost.style.top = (e.clientY - 26) + "px";
+    document.querySelectorAll(".c.over").forEach(c => c.classList.remove("over"));
+    const t = dropTarget(e);
+    if (t !== null) $("grid").querySelector(`[data-i="${t}"]`).classList.add("over");
+  });
+  window.addEventListener("pointerup", e => {
+    if (!drag) return;
+    const moved = drag.moved, target = moved ? dropTarget(e) : null, d = endDrag();
+    if (!moved) return; // a plain tap: the click handler deals with it
+    justDragged = true; setTimeout(() => { justDragged = false; }, 60);
+    if (locked) { render(); return; }
+    if (d.src.ti !== undefined) {
+      if (target !== null) place(d.src.ti, target); else render();
+    } else {
+      const cell = puzzle.cells[d.src.ci], ti = cell.tile;
+      takeBack(d.src.ci, true);
+      if (target !== null) place(ti, target);
+      else { render(); say(cell.v + " is back with the numbers."); }
+    }
+  });
+  window.addEventListener("pointercancel", () => { if (drag) { endDrag(); render(); } });
+
+  function place(ti, ci) {
+    if (ci !== undefined) sel = ci;
     if (locked || sel < 0) return;
     const cell = puzzle.cells[sel], tile = tiles[ti];
     if (tile.v === cell.v) {
@@ -312,7 +380,7 @@ else {
     } else {
       const left = MAX_TRIES - mistakes;
       say(`Not ${tile.v}. Try again! ${left} ${left === 1 ? "try" : "tries"} left.`);
-      timer = setTimeout(() => { if (!locked) render(); }, 700);
+      timer = setTimeout(() => { if (!locked && !drag) render(); }, 700);
     }
   }
 
