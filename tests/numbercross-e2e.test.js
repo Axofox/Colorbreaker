@@ -241,3 +241,22 @@ test('sideways phone shows the rotate message', { skip }, async () => {
   assert.ok(!(await p.isVisible('#menu')));
   await done(p);
 });
+
+test('solved puzzles are saved: the count stays after leaving and reloading', { skip }, async () => {
+  const p = await open();
+  const solveOne = async () => { const n = (await state(p)).blanks; for (let i = 0; i < n; i++) await right(p); };
+  await p.click('[data-level=easy]');
+  await solveOne();
+  await p.click('#next');
+  await solveOne();
+  assert.equal(await p.textContent('#solved'), '2');
+  await p.click('#menuBtn');
+  await p.click('[data-level=medium]');
+  assert.equal(await p.textContent('#solved'), '0', 'each level has its own count');
+  await solveOne();
+  await p.reload();
+  assert.match(await p.textContent('#best'), /Puzzles solved: 3 \(Easy 2 · Medium 1\)/);
+  await p.click('[data-level=easy]');
+  assert.equal(await p.textContent('#solved'), '2', 'the count carries over after a reload');
+  await done(p);
+});

@@ -231,7 +231,10 @@ else {
     get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
     set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
   };
-  let level, puzzle, tiles, sel, mistakes, hints, locked, solved = 0, timer = null;
+  let level, puzzle, tiles, sel, mistakes, hints, locked, timer = null;
+  // Solved puzzles are saved per level in this browser, so the count carries over between visits.
+  const solvedKey = () => "nc-solved-" + level;
+  const solvedCount = () => +store.get(solvedKey()) || 0;
   window.__numbercross = () => ({ puzzle, tiles, sel, mistakes, hints, locked });
 
   const say = t => { $("msg").textContent = t; };
@@ -241,11 +244,11 @@ else {
     clearTimeout(timer);
     $("game").classList.add("hidden"); $("menu").classList.remove("hidden");
     const parts = Object.keys(LEVELS).map(k => [LEVELS[k].label, +store.get("nc-solved-" + k) || 0]).filter(p => p[1]);
-    $("best").textContent = parts.length ? "Puzzles solved: " + parts.map(p => p[0] + " " + p[1]).join(" · ") : "";
+    const total = parts.reduce((n, p) => n + p[1], 0);
+    $("best").textContent = parts.length ? `Puzzles solved: ${total} (` + parts.map(p => p[0] + " " + p[1]).join(" · ") + ")" : "";
   }
 
   function start(key) {
-    if (key !== level) solved = 0;
     level = key;
     $("menu").classList.add("hidden"); $("game").classList.remove("hidden");
     $("levelName").textContent = LEVELS[key].label;
@@ -285,7 +288,7 @@ else {
     $("dots").innerHTML = Array.from({ length: MAX_TRIES }, (_, i) => `<span class="dot ${i < left ? "" : "used"}"></span>`).join(" ");
     $("hints").textContent = hints;
     $("hint").disabled = locked || hints <= 0 || !blanksLeft().length;
-    $("solved").textContent = solved;
+    $("solved").textContent = solvedCount();
     fit();
   }
 
@@ -294,9 +297,8 @@ else {
     const rest = blanksLeft();
     sel = rest.length ? puzzle.cells.indexOf(rest[0]) : -1;
     if (!rest.length) {
-      locked = true; solved++;
-      const key = "nc-solved-" + level;
-      store.set(key, (+store.get(key) || 0) + 1);
+      locked = true;
+      store.set(solvedKey(), solvedCount() + 1);
       render();
       $("next").classList.remove("hidden");
       say("Great job! You solved it!");
