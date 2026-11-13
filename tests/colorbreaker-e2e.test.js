@@ -7,7 +7,7 @@ const { pathToFileURL } = require('node:url');
 
 let chromium = null;
 try { ({ chromium } = require('playwright')); } catch (e) { /* skipped below */ }
-const URL = pathToFileURL(path.join(__dirname, '..', 'public', 'index.html')).href;
+const URL = pathToFileURL(path.join(__dirname, '..', 'public', 'colorbreaker', 'index.html')).href;
 const skip = chromium ? false : 'playwright is not installed';
 
 let browser;

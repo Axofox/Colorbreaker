@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2563eb">
+<title>Number Cross</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #ffffff; --fg: #1b1b1f; --muted: #6b7280; --border: #e5e7eb; --panel: #f9fafb; --link: #2563eb;
+    --ok: #16a34a; --bad: #dc2626; --cell: 44px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #14151a; --fg: #e7e7ea; --muted: #9aa0aa; --border: #2a2b32; --panel: #1b1c22; --link: #7db4ff; --ok: #4ade80; --bad: #f87171; }
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow: hidden; overscroll-behavior: none; touch-action: manipulation; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+  }
+  button { font: inherit; cursor: pointer; color: inherit; }
+  .hidden { display: none !important; }
+  :focus-visible { outline: 3px solid var(--link); outline-offset: 2px; }
+  .screen {
+    width: 100%; max-width: 440px; height: 100vh; height: 100dvh; margin: 0 auto; text-align: center;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); overflow: hidden; display: flex; flex-direction: column;
+  }
+  #menu { justify-content: center; align-items: center; }
+  .logo { display: block; margin: 0 auto 12px; }
+  h1 { font-size: 26px; margin: 0 0 8px; }
+  .tagline { color: var(--muted); margin: 0 0 28px; }
+  .menu-btns { display: flex; flex-direction: column; gap: 12px; align-items: center; margin-bottom: 20px; }
+  .card { border: 1px solid var(--border); background: var(--panel); border-radius: 12px; padding: 20px; text-align: left; }
+  .card p { margin: 0; font-size: 14px; line-height: 1.6; }
+  .card p + p { margin-top: 10px; }
+  .best { color: var(--muted); font-size: 13px; margin: -4px 0 16px; min-height: 1.2em; }
+  .back { margin-top: 16px; color: var(--muted); font-size: 14px; text-decoration: none; }
+  .pill {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: 999px;
+    padding: 12px 28px; background: var(--link); color: #fff; font-weight: 600; font-size: 15px;
+  }
+  .pill:disabled { opacity: .4; cursor: not-allowed; }
+  .pill.ghost { background: var(--panel); color: var(--fg); border: 1px solid var(--border); }
+  .menu-btns .pill { min-width: 180px; }
+
+  .top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .top h2 { margin: 0; font-size: 18px; }
+  .iconbtn { border: 1px solid var(--border); background: var(--panel); border-radius: 999px; padding: 6px 14px; font-size: 13px; font-weight: 600; color: var(--muted); }
+  .scorebox { font-size: 13px; color: var(--muted); min-width: 70px; text-align: right; }
+  .scorebox b { color: var(--fg); font-size: 16px; }
+  .status { display: flex; justify-content: center; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 14px; color: var(--muted); }
+  .status b { color: var(--fg); font-size: 16px; }
+  .dot { width: 14px; height: 14px; border-radius: 50%; background: var(--link); display: inline-block; }
+  .dot.used { background: var(--border); }
+
+  .board { flex: 1 1 0; min-height: 0; overflow: hidden; display: flex; align-items: center; justify-content: center;
+    border: 1px solid var(--border); background: var(--panel); border-radius: 12px; padding: 8px; }
+  .grid { display: grid; gap: 3px; }
+  .c { width: var(--cell); height: var(--cell); display: grid; place-items: center; border-radius: 8px; padding: 0;
+    font-weight: 700; font-size: calc(var(--cell) * .46); line-height: 1; }
+  .c.num { background: var(--bg); border: 1px solid var(--border); }
+  .c.op { color: var(--muted); font-weight: 600; }
+  .c.blank { border: 2px dashed var(--muted); background: var(--bg); }
+  .c.blank.sel { border: 2px solid var(--link); box-shadow: 0 0 0 3px color-mix(in srgb, var(--link) 25%, transparent); }
+  .c.done { color: var(--ok); border-color: var(--ok); }
+  .c.wrong { border-color: var(--bad); color: var(--bad); }
+  @media (prefers-reduced-motion: no-preference) {
+    .c.wrong { animation: shake .35s; }
+    @keyframes shake { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+  }
+
+  .tray { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 10px 0 8px; min-height: 52px; }
+  .tile { width: 52px; height: 52px; border-radius: 10px; border: 2px solid var(--ok); background: color-mix(in srgb, var(--ok) 12%, var(--bg));
+    color: var(--ok); font-weight: 800; font-size: 22px; padding: 0; }
+  .tile:active { transform: scale(.92); }
+  .tile:disabled { opacity: .5; }
+  .actions { display: flex; gap: 10px; justify-content: center; }
+  #msg { min-height: 2.8em; margin-top: 8px; color: var(--muted); font-size: 14px; line-height: 1.4; }
+
+  #rotate { display: none; position: fixed; inset: 0; z-index: 10; background: var(--bg); color: var(--muted); align-items: center; justify-content: center; text-align: center; }
+  @media (orientation: landscape) and (pointer: coarse) { #rotate { display: flex; } .screen { display: none; } }
+</style>
+</head>
+<body>
+
+<main class="screen" id="menu">
+  <svg class="logo" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <rect x="3" y="3" width="18" height="18" rx="3"/><path d="M12 8v8M8 12h8"/>
+  </svg>
+  <h1>Number Cross</h1>
+  <p class="tagline">Fill in the missing numbers.</p>
+  <div class="menu-btns">
+    <button class="pill" data-level="easy">Easy &rarr;</button>
+    <button class="pill" data-level="medium">Medium &rarr;</button>
+    <button class="pill" data-level="hard">Hard &rarr;</button>
+  </div>
+  <div class="best" id="best"></div>
+  <div class="card">
+    <p>Tap an empty box, then tap the number that goes there.</p>
+    <p>You have <strong>3 tries</strong>. After 3 wrong numbers you get a new puzzle. You also get <strong>2 hints</strong>.</p>
+    <p><strong>Easy</strong>: plus and minus up to 10. <strong>Medium</strong>: up to 20. <strong>Hard</strong>: up to 30, with times 2 and divide by 2.</p>
+  </div>
+  <a class="back" href="../index.html">&larr; All games</a>
+</main>
+
+<main class="screen hidden" id="game">
+  <div class="top">
+    <button class="iconbtn" id="menuBtn" aria-label="Back to menu">&larr; Menu</button>
+    <h2 id="levelName">Easy</h2>
+    <div class="scorebox">Solved <b id="solved">0</b></div>
+  </div>
+  <div class="status">Tries left <b id="tries">3</b> <span id="dots" aria-hidden="true"></span></div>
+  <div class="board"><div class="grid" id="grid"></div></div>
+  <div class="tray" id="tray" role="group" aria-label="Numbers"></div>
+  <div class="actions">
+    <button class="pill ghost" id="hint">&#128161; <span>Hint (<span id="hints">2</span>)</span></button>
+    <button class="pill hidden" id="next">Next puzzle</button>
+  </div>
+  <div id="msg" role="status"></div>
+</main>
+
+<div id="rotate" role="alert"><div><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg><p>Turn your phone upright to play.</p></div></div>
+
+<script>
+const LEVELS = {
+  easy:   { label: "Easy",   max: 10, ops: ["+", "-"],           eqs: 3 },
+  medium: { label: "Medium", max: 20, ops: ["+", "-"],           eqs: 4 },
+  hard:   { label: "Hard",   max: 30, ops: ["+", "-", "×", "÷"], eqs: 5 },
+};
+const MAX_W = 7, MAX_H = 9, MAX_TRIES = 3, MAX_HINTS = 2;
+
+// Sums a 5-year-old can do: two small numbers (7 + 7), or bigger ones with no carrying (12 + 5, not 14 + 16).
+const easyAdd = (a, b) => (a < 10 && b < 10) || (a % 10) + (b % 10) < 10;
+// Take-aways with no borrowing (17 - 5, not 14 - 7), or anything starting from 10 or less.
+const easySub = (a, b) => a <= 10 || (a % 10) >= (b % 10);
+
+// Every allowed equation for a level, as [a, op, b, c] meaning a op b = c. All numbers are whole and at least 1.
+function equationsFor(key) {
+  const L = LEVELS[key], out = [];
+  for (let a = 1; a <= L.max; a++) for (let b = 1; b <= L.max; b++) {
+    if (L.ops.includes("+") && a + b <= L.max && easyAdd(a, b)) out.push([a, "+", b, a + b]);
+    if (L.ops.includes("-") && a - b >= 1 && easySub(a, b)) out.push([a, "-", b, a - b]);
+    // Times and divide stay tiny: only doubles and halves, nothing above 20.
+    if (L.ops.includes("×") && (a === 2 || b === 2) && a <= 10 && b <= 10 && a * b <= 20) out.push([a, "×", b, a * b]);
+    if (L.ops.includes("÷") && b === 2 && a <= 20 && a % 2 === 0) out.push([a, "÷", b, a / b]);
+  }
+  return out;
+}
+
+// Builds a crossword of equations. Each equation is 5 boxes in a line: number, sign, number, =, number.
+// Equations cross on number boxes. Every equation has at most one empty box, so each answer can be worked out.
+function generate(key, rnd = Math.random) {
+  const L = LEVELS[key], all = equationsFor(key);
+  const pick = arr => arr[Math.floor(rnd() * arr.length)];
+  const k = (x, y) => x + "," + y;
+  for (let attempt = 0; attempt < 500; attempt++) {
+    const cells = new Map(), eqs = [];
+    const put = (ox, oy, dx, dy, e) => {
+      const tokens = [e[0], e[1], e[2], "=", e[3]], ids = [];
+      tokens.forEach((v, i) => {
+        const x = ox + i * dx, y = oy + i * dy;
+        let c = cells.get(k(x, y));
+        if (!c) { c = { x, y, t: i % 2 ? "op" : "num", v, blank: false, eqs: [] }; cells.set(k(x, y), c); }
+        c.eqs.push(eqs.length); ids.push(c);
+      });
+      eqs.push({ dx, dy, cells: ids });
+    };
+    put(0, 0, 1, 0, pick(all));
+    for (let tries = 0; eqs.length < L.eqs && tries < 300; tries++) {
+      const open = [...cells.values()].filter(c => c.t === "num" && c.eqs.length === 1);
+      if (!open.length) break;
+      const cross = pick(open), base = eqs[cross.eqs[0]];
+      const dx = base.dx ? 0 : 1, dy = base.dx ? 1 : 0, pos = pick([0, 2, 4]);
+      const ox = cross.x - pos * dx, oy = cross.y - pos * dy;
+      const line = new Set(); for (let i = 0; i < 5; i++) line.add(k(ox + i * dx, oy + i * dy));
+      let ok = !cells.has(k(ox - dx, oy - dy)) && !cells.has(k(ox + 5 * dx, oy + 5 * dy));
+      for (let i = 0; ok && i < 5; i++) {
+        if (i === pos) continue;
+        const x = ox + i * dx, y = oy + i * dy;
+        if (cells.has(k(x, y))) ok = false;
+        for (const [nx, ny] of [[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]])
+          if (cells.has(k(nx, ny)) && !line.has(k(nx, ny))) ok = false;
+      }
+      if (!ok) continue;
+      const xs = [...cells.values()].map(c => c.x).concat(ox, ox + 4 * dx), ys = [...cells.values()].map(c => c.y).concat(oy, oy + 4 * dy);
+      if (Math.max(...xs) - Math.min(...xs) + 1 > MAX_W || Math.max(...ys) - Math.min(...ys) + 1 > MAX_H) continue;
+      const slot = pos === 0 ? 0 : pos === 2 ? 2 : 3;
+      const op = pick(L.ops.length > 2 ? ["+", "-", "+", "-", "×", "÷"] : L.ops), fits = all.filter(e => e[slot] === cross.v && e[1] === op);
+      if (!fits.length) continue;
+      put(ox, oy, dx, dy, pick(fits));
+    }
+    if (eqs.length < L.eqs) continue;
+    // Choose the empty boxes: at most one per equation.
+    const order = eqs.map((_, i) => i).sort(() => rnd() - 0.5);
+    for (const i of order) {
+      const nums = eqs[i].cells.filter(c => c.t === "num");
+      if (nums.some(c => c.blank)) continue;
+      const options = nums.filter(c => c.eqs.every(j => j === i || !eqs[j].cells.some(o => o.blank)));
+      if (options.length) pick(options).blank = true;
+    }
+    const list = [...cells.values()];
+    const blanks = list.filter(c => c.blank);
+    if (blanks.length < 2) continue;
+    const minX = Math.min(...list.map(c => c.x)), minY = Math.min(...list.map(c => c.y));
+    list.forEach(c => { c.x -= minX; c.y -= minY; });
+    return {
+      level: key,
+      w: Math.max(...list.map(c => c.x)) + 1, h: Math.max(...list.map(c => c.y)) + 1,
+      cells: list,
+      eqs: eqs.map(e => e.cells.map(c => list.indexOf(c))),
+      tiles: blanks.map(c => c.v).sort((a, b) => a - b),
+    };
+  }
+  throw new Error("could not build a puzzle");
+}
+
+if (typeof document === "undefined") { module.exports = { LEVELS, equationsFor, generate, easyAdd, easySub, MAX_W, MAX_H }; }
+else {
+  const $ = id => document.getElementById(id);
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
+  };
+  let level, puzzle, tiles, sel, mistakes, hints, locked, solved = 0, timer = null;
+  window.__numbercross = () => ({ puzzle, tiles, sel, mistakes, hints, locked });
+
+  const say = t => { $("msg").textContent = t; };
+  const blanksLeft = () => puzzle.cells.filter(c => c.blank && !c.filled);
+
+  function showMenu() {
+    clearTimeout(timer);
+    $("game").classList.add("hidden"); $("menu").classList.remove("hidden");
+    const parts = Object.keys(LEVELS).map(k => [LEVELS[k].label, +store.get("nc-solved-" + k) || 0]).filter(p => p[1]);
+    $("best").textContent = parts.length ? "Puzzles solved: " + parts.map(p => p[0] + " " + p[1]).join(" · ") : "";
+  }
+
+  function start(key) {
+    if (key !== level) solved = 0;
+    level = key;
+    $("menu").classList.add("hidden"); $("game").classList.remove("hidden");
+    $("levelName").textContent = LEVELS[key].label;
+    newPuzzle();
+    say("Tap an empty box, then tap a number.");
+  }
+
+  function newPuzzle() {
+    clearTimeout(timer);
+    puzzle = generate(level);
+    tiles = puzzle.tiles.map(v => ({ v, used: false }));
+    mistakes = 0; hints = MAX_HINTS; locked = false;
+    sel = puzzle.cells.indexOf(blanksLeft()[0]);
+    $("next").classList.add("hidden");
+    render();
+  }
+
+  function render() {
+    const g = $("grid");
+    g.style.gridTemplateColumns = `repeat(${puzzle.w}, var(--cell))`;
+    g.innerHTML = puzzle.cells.map((c, i) => {
+      const pos = `grid-column:${c.x + 1};grid-row:${c.y + 1}`;
+      if (c.t === "op") return `<div class="c op" style="${pos}">${c.v === "-" ? "&minus;" : c.v}</div>`;
+      if (c.blank && !c.filled) return `<button class="c num blank ${i === sel ? "sel" : ""}" data-i="${i}" style="${pos}" aria-label="empty box"></button>`;
+      return `<div class="c num ${c.filled ? "done" : ""}" style="${pos}">${c.v}</div>`;
+    }).join("");
+    g.querySelectorAll("button").forEach(b => b.onclick = () => { if (!locked) { sel = +b.dataset.i; render(); } });
+    $("tray").innerHTML = tiles.map((t, i) => t.used ? "" : `<button class="tile" data-t="${i}">${t.v}</button>`).join("");
+    $("tray").querySelectorAll("button").forEach(b => { b.disabled = locked; b.onclick = () => place(+b.dataset.t); });
+    const left = MAX_TRIES - mistakes;
+    $("tries").textContent = left;
+    $("dots").innerHTML = Array.from({ length: MAX_TRIES }, (_, i) => `<span class="dot ${i < left ? "" : "used"}"></span>`).join(" ");
+    $("hints").textContent = hints;
+    $("hint").disabled = locked || hints <= 0 || !blanksLeft().length;
+    $("solved").textContent = solved;
+    fit();
+  }
+
+  function fill(cell, tile) {
+    cell.filled = true; tile.used = true;
+    const rest = blanksLeft();
+    sel = rest.length ? puzzle.cells.indexOf(rest[0]) : -1;
+    if (!rest.length) {
+      locked = true; solved++;
+      const key = "nc-solved-" + level;
+      store.set(key, (+store.get(key) || 0) + 1);
+      render();
+      $("next").classList.remove("hidden");
+      say("Great job! You solved it!");
+      return true;
+    }
+    render();
+    return false;
+  }
+
+  function place(ti) {
+    if (locked || sel < 0) return;
+    const cell = puzzle.cells[sel], tile = tiles[ti];
+    if (tile.v === cell.v) {
+      if (!fill(cell, tile)) say("Yes! " + tile.v + " is right.");
+      return;
+    }
+    mistakes++;
+    render();
+    const el = $("grid").querySelector(`[data-i="${sel}"]`);
+    if (el) { el.textContent = tile.v; el.classList.add("wrong"); }
+    if (mistakes >= MAX_TRIES) {
+      locked = true; render();
+      say("3 wrong tries. Here comes a new puzzle!");
+      timer = setTimeout(() => { newPuzzle(); say("New puzzle. Take your time!"); }, 1800);
+    } else {
+      const left = MAX_TRIES - mistakes;
+      say(`Not ${tile.v}. Try again! ${left} ${left === 1 ? "try" : "tries"} left.`);
+      timer = setTimeout(() => { if (!locked) render(); }, 700);
+    }
+  }
+
+  function hint() {
+    if (locked || hints <= 0) return;
+    if (sel < 0) return;
+    const cell = puzzle.cells[sel], tile = tiles.find(t => !t.used && t.v === cell.v);
+    hints--;
+    clearTimeout(timer);
+    if (!fill(cell, tile)) say("Hint: this box is " + cell.v + ".");
+  }
+
+  // Size the boxes so the whole puzzle fits with no scrolling.
+  function fit() {
+    if (!puzzle || $("game").classList.contains("hidden")) return;
+    const board = $("grid").parentElement;
+    const byW = (board.clientWidth - 16 - 3 * (puzzle.w - 1)) / puzzle.w;
+    const byH = (board.clientHeight - 16 - 3 * (puzzle.h - 1)) / puzzle.h;
+    document.documentElement.style.setProperty("--cell", Math.max(18, Math.min(52, Math.floor(byW), Math.floor(byH))) + "px");
+  }
+
+  document.querySelectorAll("[data-level]").forEach(b => b.onclick = () => start(b.dataset.level));
+  $("menuBtn").onclick = showMenu;
+  $("hint").onclick = hint;
+  $("next").onclick = () => { newPuzzle(); say("Tap an empty box, then tap a number."); };
+  window.addEventListener("resize", fit);
+  window.addEventListener("orientationchange", fit);
+  try { screen.orientation.lock("portrait").catch(() => {}); } catch (e) {}
+  showMenu();
+}
+</script>
+</body>
+</html>

@@ -7,7 +7,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 
 function load() {
-  const html = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
+  const html = fs.readFileSync(path.join(__dirname, '..', 'public', 'colorbreaker', 'index.html'), 'utf8');
   const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)];
   assert.equal(scripts.length, 1, 'expected exactly one inline script');
   const sandbox = { module: { exports: {} }, Math };
