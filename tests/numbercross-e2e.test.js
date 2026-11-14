@@ -106,7 +106,7 @@ test('three wrong numbers show the game-over card; tapping starts a new puzzle w
   assert.match(await p.textContent('#goReason'), /3 wrong numbers\. That box needed \d+\./);
   assert.equal(await p.textContent('#goStages'), '0');
   assert.equal(await p.textContent('#goStagesLabel'), 'puzzles solved');
-  await p.waitForTimeout(800);
+  await p.waitForTimeout(1000);
   await p.click('#gameover');
   assert.equal(await p.textContent('#tries'), '3');
   assert.equal(await p.textContent('#stage'), '1');

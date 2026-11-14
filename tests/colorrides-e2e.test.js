@@ -70,7 +70,7 @@ test('math: 3 wrong cars show the animated game-over card; tapping starts again'
   await p.waitForSelector('#gameover.show');
   assert.match(await p.textContent('#goReason'), /3 wrong cars\. The last one was .* = \d+, but the passenger needed \d+\./);
   assert.equal(await p.textContent('#goStages'), '0');
-  await p.waitForTimeout(800);
+  await p.waitForTimeout(1000);
   await p.click('#gameover');
   assert.ok(!(await p.isVisible('#gameover')));
   const s = await state(p);
@@ -129,7 +129,7 @@ test('colors: a blocked car shakes and stays; four spots full with nobody fittin
   await p.waitForSelector('#gameover.show', { timeout: 5000 });
   assert.match(await p.textContent('#goReason'), /All 4 parking spots were full/);
   assert.equal(await p.textContent('#goStages'), '0');
-  await p.waitForTimeout(800);
+  await p.waitForTimeout(1000);
   await p.click('#gameover');
   assert.ok(!(await p.isVisible('#gameover')));
   assert.deepEqual((await state(p)).slots, [null, null, null, null]);
@@ -153,4 +153,31 @@ test('both versions fit phone and desktop screens with no scrolling', { skip }, 
       await done(p);
     }
   }
+});
+
+test('the game-over card is a real animation: it falls from the top and bounces, pieces tumble, letters pop in', { skip }, async () => {
+  const p = await open({ motion: true });
+  await p.click('[data-mode=hard]');
+  await p.waitForTimeout(600);
+  for (let i = 0; i < 3; i++) await p.click(`.gcar[data-id="${await wrongCar(p)}"]`);
+  await p.waitForSelector('#gameover.show');
+  const top = () => p.evaluate(() => document.querySelector('.go-card').getBoundingClientRect().top);
+  const early = await top();
+  assert.ok(early < 0, `the card starts above the screen (top ${early})`);
+  assert.ok(await p.locator('.go-piece').count() > 10, 'game pieces tumble down');
+  assert.equal(await p.locator('#goTitle span').count(), 9, '"Game over" pops in letter by letter');
+  await p.waitForTimeout(1500);
+  const landed = await top();
+  assert.ok(landed > 100, `the card has landed (top ${landed})`);
+  await done(p);
+});
+
+test('with Reduce Motion the game-over card just fades in, with no falling pieces', { skip }, async () => {
+  const p = await open({ motion: false });
+  await p.click('[data-mode=hard]');
+  for (let i = 0; i < 3; i++) await p.click(`.gcar[data-id="${await wrongCar(p)}"]`);
+  await p.waitForSelector('#gameover.show');
+  assert.ok(await p.evaluate(() => document.querySelector('.go-card').getBoundingClientRect().top) > 100);
+  assert.equal(await p.locator('.go-piece').count(), 0);
+  await done(p);
 });

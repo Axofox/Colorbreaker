@@ -1,7 +1,7 @@
 // Offline play: keeps a copy of every game so they still work with no internet.
 // Online, pages come from the network (so new versions show up right away) and the copy is refreshed.
 // Offline, or if the network is very slow, the saved copy is used.
-const CACHE = "color-games-v1";
+const CACHE = "color-games-v2";
 const FILES = [
   "./", "index.html", "app.js", "manifest.webmanifest",
   "icons/icon.svg", "icons/icon-192.png", "icons/icon-512.png", "icons/maskable-512.png", "icons/apple-touch-icon.png", "icons/favicon-32.png",

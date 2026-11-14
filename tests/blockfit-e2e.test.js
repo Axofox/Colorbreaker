@@ -111,7 +111,7 @@ test('game over: the animated card says why and how many scenes; tapping starts 
   assert.match(await p.textContent('#goReason'), /No room left for any of your shapes/);
   assert.equal(await p.textContent('#goStages'), '0');
   assert.equal(await p.textContent('#goStagesLabel'), 'scenes completed');
-  await p.waitForTimeout(800);
+  await p.waitForTimeout(1000);
   await p.click('#gameover');
   assert.ok(!(await p.isVisible('#gameover')));
   const s = await state(p);
