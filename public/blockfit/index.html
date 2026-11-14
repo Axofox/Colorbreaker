@@ -8,10 +8,10 @@
 <style>
   :root {
     color-scheme: light dark;
-    --bg: #ffffff; --fg: #1b1b1f; --muted: #6b7280; --border: #e5e7eb; --panel: #f9fafb; --link: #2563eb; --empty: #e9ecf1;
+    --bg: #ffffff; --fg: #1b1b1f; --muted: #6b7280; --border: #e5e7eb; --panel: #f9fafb; --link: #2563eb; --hole: #eef0f3;
   }
   @media (prefers-color-scheme: dark) {
-    :root { --bg: #14151a; --fg: #e7e7ea; --muted: #9aa0aa; --border: #2a2b32; --panel: #1b1c22; --link: #7db4ff; --empty: #23252d; }
+    :root { --bg: #14151a; --fg: #e7e7ea; --muted: #9aa0aa; --border: #2a2b32; --panel: #1b1c22; --link: #7db4ff; --hole: #23242b; }
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { height: 100%; overflow: hidden; overscroll-behavior: none; touch-action: manipulation; }
@@ -44,41 +44,39 @@
   }
   .menu-btns .pill { min-width: 180px; }
 
-  .top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+  .pill:hover { opacity: .9; }
+  .top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .top h2 { margin: 0; font-size: 18px; }
   .iconbtn { border: 1px solid var(--border); background: var(--panel); border-radius: 999px; padding: 6px 14px; font-size: 13px; font-weight: 600; color: var(--muted); }
-  .bestsmall { font-size: 12px; color: var(--muted); min-width: 70px; text-align: right; }
-  .bestsmall b { color: var(--fg); }
-  .scoreline { font-size: 34px; font-weight: 800; line-height: 1.1; margin: 4px 0 2px; }
-  #msg { min-height: 1.5em; color: var(--muted); font-size: 14px; font-weight: 600; margin-bottom: 8px; }
-  #msg.combo { color: var(--link); }
+  .scorebox { font-size: 13px; color: var(--muted); min-width: 70px; text-align: right; }
+  .scorebox b { color: var(--fg); font-size: 16px; }
+  .status { display: flex; justify-content: center; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 14px; color: var(--muted); }
+  .status b { color: var(--fg); font-size: 16px; }
 
-  .boardwrap { flex: 1 1 0; min-height: 0; display: flex; align-items: center; justify-content: center; position: relative; }
-  #board { --gap: 3px; display: grid; grid-template-columns: repeat(8, 1fr); gap: var(--gap); padding: 6px;
-    width: min(100%, 52dvh); aspect-ratio: 1; border-radius: 12px; border: 1px solid var(--border); background: var(--panel); }
-  .cell { border-radius: 5px; background: var(--empty); }
-  .blk { position: relative; border-radius: 5px; box-shadow: inset 0 -3px 0 rgba(0,0,0,.18), inset 0 2px 0 rgba(255,255,255,.28); }
+  .board { flex: 1 1 0; min-height: 0; overflow: hidden; display: flex; align-items: center; justify-content: center;
+    border: 1px solid var(--border); background: var(--panel); border-radius: 12px; padding: 8px; }
+  #grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; width: min(100%, 48dvh); aspect-ratio: 1; }
+  .cell { border-radius: 8px; background: var(--hole); border: 1px solid var(--border); }
+  .blk { border-radius: 8px; border: 1px solid rgba(0,0,0,.14); }
   .cell.ghost { opacity: .45; }
-  .cell.willclear { filter: brightness(1.25); box-shadow: 0 0 0 2px var(--link); }
+  .cell.willclear { box-shadow: 0 0 0 3px color-mix(in srgb, var(--link) 45%, transparent); }
   @media (prefers-reduced-motion: no-preference) {
     .cell.pop { animation: pop .28s ease-out forwards; }
     @keyframes pop { to { transform: scale(.2); opacity: 0; } }
   }
 
-  .tray { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; height: 118px; flex: none; }
+  .tray { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 10px 0 8px; height: 104px; flex: none; }
   .slot { display: flex; align-items: center; justify-content: center; border-radius: 12px; touch-action: none; padding: 0;
     border: 1px solid transparent; background: none; }
-  .slot.sel { border-color: var(--link); background: var(--panel); }
+  .slot.sel { border: 2px solid var(--link); background: var(--bg); box-shadow: 0 0 0 3px color-mix(in srgb, var(--link) 25%, transparent); }
   .slot.nofit .piece { opacity: .3; }
   .piece { display: grid; gap: 2px; pointer-events: none; }
   .piece i { width: 18px; height: 18px; display: block; }
-  .piece i.blk { border-radius: 4px; }
-  .float { position: fixed; z-index: 20; pointer-events: none; display: grid; filter: drop-shadow(0 8px 12px rgba(0,0,0,.25)); }
+  .piece i.blk { border-radius: 5px; }
+  .float { position: fixed; z-index: 20; pointer-events: none; display: grid; filter: drop-shadow(0 6px 16px rgba(0,0,0,.25)); }
   .float i { display: block; }
-
-  .overlay { position: absolute; inset: 0; display: flex; flex-direction: column; gap: 12px; align-items: center; justify-content: center;
-    background: color-mix(in srgb, var(--bg) 85%, transparent); border-radius: 12px; }
-  .overlay h2 { margin: 0; font-size: 22px; }
-  .overlay p { margin: 0; color: var(--muted); font-size: 14px; }
+  .actions { display: flex; gap: 10px; justify-content: center; }
+  #msg { min-height: 2.8em; margin-top: 8px; color: var(--muted); font-size: 14px; line-height: 1.4; }
 
   #rotate { display: none; position: fixed; inset: 0; z-index: 10; background: var(--bg); color: var(--muted); align-items: center; justify-content: center; text-align: center; }
   @media (orientation: landscape) and (pointer: coarse) { #rotate { display: flex; } .screen { display: none; } }
@@ -111,19 +109,14 @@
 <main class="screen hidden" id="game">
   <div class="top">
     <button class="iconbtn" id="menuBtn" aria-label="Back to menu">&larr; Menu</button>
-    <div class="bestsmall">Best <b id="bestNow">0</b></div>
+    <h2>Block Fit</h2>
+    <div class="scorebox">Score <b id="score">0</b></div>
   </div>
-  <div class="scoreline" id="score" aria-live="polite">0</div>
-  <div id="msg" role="status"></div>
-  <div class="boardwrap">
-    <div id="board" role="grid" aria-label="Grid, 8 by 8"></div>
-    <div class="overlay hidden" id="overlay" role="alert">
-      <h2>No more room</h2>
-      <p id="ovText"></p>
-      <button class="pill" id="againBtn">Play again</button>
-    </div>
-  </div>
+  <div class="status">Best <b id="bestNow">0</b></div>
+  <div class="board"><div id="grid" role="grid" aria-label="Grid, 8 by 8"></div></div>
   <div class="tray" id="tray" role="group" aria-label="Shapes"></div>
+  <div class="actions hidden" id="actions"><button class="pill" id="againBtn">Play again</button></div>
+  <div id="msg" role="status"></div>
 </main>
 
 <div id="rotate" role="alert"><div><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg><p>Turn your phone upright to play.</p></div></div>
@@ -131,7 +124,7 @@
 <script>
 // ---------- Rules (pure, no DOM; exported for tests) ----------
 const N = 8;
-const COLORS = ["#e23a2e", "#f28c28", "#f2b705", "#3bc14f", "#2bb5c9", "#2f6fe8", "#9b5de5"];
+const COLORS = ["#e754d0", "#f7dc1a", "#3bc14f", "#e23a2e", "#2f6fe8"]; // same as Color Breaker's marbles
 // Base shapes, rows split by "/". Each one is also used in all its turned positions.
 const BASE = ["#", "##", "###", "####", "#####", "##/##", "###/###/###", "##/#.", "###/#../#..", "###/#..", "###/..#", "###/.#.", "##./.##", ".##/##."];
 
@@ -206,7 +199,7 @@ if (typeof document === "undefined") {
 } else {
 // ---------- Page ----------
 const $ = id => document.getElementById(id);
-const boardEl = $("board"), trayEl = $("tray");
+const boardEl = $("grid"), trayEl = $("tray");
 const BEST_KEY = "blockfit-best";
 const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
 const best = () => +store.get(BEST_KEY) || 0;
@@ -262,7 +255,7 @@ function preview(i, r, c) {
   return true;
 }
 
-function say(text, combo) { const m = $("msg"); m.textContent = text; m.classList.toggle("combo", !!combo); }
+function say(text) { $("msg").textContent = text; }
 function tryPlay(i, r, c) {
   if (busy) return false;
   const before = g.board, p = g.tray[i];
@@ -270,7 +263,7 @@ function tryPlay(i, r, c) {
   if (!res) return false;
   sel = -1;
   if (res.lines) {
-    say((res.lines > 1 ? res.lines + " lines! " : "Line! ") + (g.streak > 1 ? "Combo x" + g.streak + " " : "") + "+" + res.points, true);
+    say((res.lines > 1 ? res.lines + " lines! " : "Line! ") + (g.streak > 1 ? "Combo x" + g.streak + " " : "") + "+" + res.points);
     renderTray(); $("score").textContent = g.score;
     // Draw the board with the new shape on it, then let the full lines pop before showing the result.
     before.forEach((row, y) => row.forEach((v, x) => paint(cellAt(y, x), v)));
@@ -289,14 +282,14 @@ function checkOver() {
   if (!g.over) return;
   const b = best(), isBest = g.score > b;
   if (isBest) store.set(BEST_KEY, g.score);
-  $("ovText").textContent = isBest && g.score > 0 ? "New best score: " + g.score + "!" : "Score: " + g.score;
-  $("overlay").classList.remove("hidden");
+  say("No more room! " + (isBest && g.score > 0 ? "New best score: " + g.score + "!" : "You scored " + g.score + ". Try again!"));
+  $("actions").classList.remove("hidden");
 }
 
 function start() {
   g = newGame(); sel = -1; busy = false;
-  $("menu").classList.add("hidden"); $("game").classList.remove("hidden"); $("overlay").classList.add("hidden");
-  say("Drag a shape onto the grid.");
+  $("menu").classList.add("hidden"); $("game").classList.remove("hidden"); $("actions").classList.add("hidden");
+  say("Drag a shape onto the grid, or tap a shape then tap a square.");
   render();
 }
 function toMenu() { g = null; showBest(); $("game").classList.add("hidden"); $("menu").classList.remove("hidden"); }

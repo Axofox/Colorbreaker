@@ -41,8 +41,10 @@ async function drag(p, i, r, c) {
   await p.mouse.up();
 }
 
-test('starts with an empty grid and three shapes', { skip }, async () => {
+test('starts with an empty grid and three shapes, laid out like the other games', { skip }, async () => {
   const p = await open();
+  assert.equal(await p.textContent('.top h2'), 'Block Fit');
+  assert.match(await p.textContent('.scorebox'), /Score\s*0/);
   assert.equal(await p.locator('.cell').count(), 64);
   assert.equal(await p.locator('.slot[data-i]').count(), 3);
   assert.equal(filled(await state(p)), 0);
@@ -88,10 +90,10 @@ test('game over shows the score and Play again starts fresh', { skip }, async ()
     g.tray = [{ cells: [[0, 0]], color: 1 }, { cells: [[0, 0], [0, 1]], color: 1 }, null];
   });
   await drag(p, 0, 0, 0);
-  assert.ok(await p.isVisible('#overlay'));
-  assert.match(await p.textContent('#ovText'), /score/i);
+  assert.ok(await p.isVisible('#againBtn'));
+  assert.match(await p.textContent('#msg'), /No more room/);
   await p.click('#againBtn');
-  assert.ok(!(await p.isVisible('#overlay')));
+  assert.ok(!(await p.isVisible('#againBtn')));
   assert.equal(filled(await state(p)), 0);
   await p.click('#menuBtn');
   assert.match(await p.textContent('#best'), /Best score: \d+/);
@@ -101,7 +103,7 @@ test('game over shows the score and Play again starts fresh', { skip }, async ()
 test('fits phone and desktop screens with no scrolling', { skip }, async () => {
   for (const [w, h] of [[375, 667], [390, 844], [1280, 800]]) {
     const p = await open({ width: w, height: h, touch: w < 800 });
-    const r = await p.evaluate(() => { const t = document.getElementById('tray').getBoundingClientRect(), b = document.getElementById('board').getBoundingClientRect();
+    const r = await p.evaluate(() => { const t = document.getElementById('tray').getBoundingClientRect(), b = document.getElementById('grid').getBoundingClientRect();
       return { trayBottom: t.bottom, bw: b.width, bh: b.height, right: b.right, sw: document.documentElement.scrollWidth, cw: innerWidth }; });
     assert.ok(r.trayBottom <= h, `shapes on screen at ${w}x${h}`);
     assert.ok(Math.abs(r.bw - r.bh) < 2, 'grid is square');
