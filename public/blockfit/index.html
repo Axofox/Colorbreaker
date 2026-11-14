@@ -53,17 +53,33 @@
   .status { display: flex; justify-content: center; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 14px; color: var(--muted); }
   .status b { color: var(--fg); font-size: 16px; }
 
-  .board { flex: 1 1 0; min-height: 0; overflow: hidden; display: flex; align-items: center; justify-content: center;
+  .board { position: relative; flex: 1 1 0; min-height: 0; overflow: hidden; display: flex; align-items: center; justify-content: center;
     border: 1px solid var(--border); background: var(--panel); border-radius: 12px; padding: 8px; }
   #grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; width: min(100%, 48dvh); aspect-ratio: 1; }
-  .cell { border-radius: 8px; background: var(--hole); border: 1px solid var(--border); }
+  .cell { position: relative; border-radius: 8px; background: var(--hole); border: 1px solid var(--border); }
+  /* starting blocks of a scene carry a star: clear them all to finish the scene */
+  .cell.goal::after { content: ""; position: absolute; inset: 22%; background: #fff;
+    clip-path: polygon(50% 0, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%); }
+  .cell.goal.dk::after { background: #1b1b1f; }
   .blk { border-radius: 8px; border: 1px solid rgba(0,0,0,.14); }
   .cell.ghost { opacity: .45; }
   .cell.willclear { box-shadow: 0 0 0 3px color-mix(in srgb, var(--link) 45%, transparent); }
   @media (prefers-reduced-motion: no-preference) {
     .cell.pop { animation: pop .28s ease-out forwards; }
     @keyframes pop { to { transform: scale(.2); opacity: 0; } }
+    .cell.wave { animation: wave .7s ease-in-out both; }
+    @keyframes wave { 0% { transform: scale(1); } 40% { transform: scale(.55) rotate(12deg); filter: brightness(1.5); } 100% { transform: scale(1); } }
+    .confetti { position: absolute; left: 50%; top: 45%; width: 10px; height: 14px; border-radius: 2px; pointer-events: none;
+      animation: fly 1.4s cubic-bezier(.2,.7,.4,1) forwards; }
+    @keyframes fly { 0% { transform: translate(0, 0) rotate(0); opacity: 1; }
+      100% { transform: translate(var(--dx), var(--dy)) rotate(var(--rot)); opacity: 0; } }
+    .banner { animation: bannerIn .45s cubic-bezier(.2,1.6,.4,1) both; }
+    @keyframes bannerIn { from { transform: scale(.3); opacity: 0; } to { transform: scale(1); opacity: 1; } }
   }
+  .banner { position: absolute; left: 50%; top: 50%; margin: -44px 0 0 -130px; width: 260px; padding: 14px 16px; border-radius: 16px;
+    background: var(--bg); border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(0,0,0,.18); pointer-events: none; }
+  .banner b { display: block; font-size: 22px; }
+  .banner span { color: var(--muted); font-size: 14px; }
 
   .tray { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 10px 0 8px; height: 104px; flex: none; }
   .slot { display: flex; align-items: center; justify-content: center; border-radius: 12px; touch-action: none; padding: 0;
@@ -93,15 +109,15 @@
     <rect x="5" y="20.5" width="6.5" height="6.5" rx="1.5" fill="#2f6fe8"/><rect x="12.75" y="20.5" width="6.5" height="6.5" rx="1.5" fill="#e23a2e"/><rect x="20.5" y="20.5" width="6.5" height="6.5" rx="1.5" fill="#e23a2e"/>
   </svg>
   <h1>Block Fit</h1>
-  <p class="tagline">Drag shapes onto the grid. Fill lines to clear them.</p>
+  <p class="tagline">Clear the star blocks to finish each scene.</p>
   <div class="menu-btns">
     <button class="pill" id="playBtn">Play &rarr;</button>
   </div>
   <div class="best" id="best"></div>
   <div class="card">
     <p>Drag a shape from the bottom onto the grid. Or tap a shape, then tap the square where its top block should go.</p>
-    <p>Fill a whole row or column and it clears. Clear lines one move after another for a combo with extra points.</p>
-    <p>When all three shapes are used you get three new ones. The game ends when none of your shapes fit.</p>
+    <p>Fill a whole row or column and it clears. Each scene starts with some blocks marked with a star. <strong>Clear every star block to finish the scene</strong> and get bonus points.</p>
+    <p>When all three shapes are used you get three new ones. The game ends when none of your shapes fit. How many scenes can you finish?</p>
   </div>
   <a class="back" href="../index.html">&larr; All games</a>
 </main>
@@ -112,7 +128,7 @@
     <h2>Block Fit</h2>
     <div class="scorebox">Score <b id="score">0</b></div>
   </div>
-  <div class="status">Best <b id="bestNow">0</b></div>
+  <div class="status">Scene <b id="scene">1</b> <span aria-hidden="true">&middot;</span> Stars left <b id="left">0</b> <span aria-hidden="true">&middot;</span> Done <b id="done">0</b></div>
   <div class="board"><div id="grid" role="grid" aria-label="Grid, 8 by 8"></div></div>
   <div class="tray" id="tray" role="group" aria-label="Shapes"></div>
   <div class="actions hidden" id="actions"><button class="pill" id="againBtn">Play again</button></div>
@@ -178,35 +194,81 @@ function deal(board, rand = Math.random) {
   return set;
 }
 
-function newGame(rand = Math.random) { const board = emptyBoard(); return { board, tray: deal(board, rand), score: 0, streak: 0, over: false, rand }; }
+// Scenes: each one starts with a picture of blocks (mirrored left to right), marked as stars.
+// Clearing every star block finishes the scene. Later scenes have more stars.
+function sceneLayout(scene, rand = Math.random) {
+  const want = Math.min(6 + scene * 2, 24);
+  for (let attempt = 0; ; attempt++) {
+    const board = emptyBoard(), goal = emptyBoard();
+    let n = 0;
+    while (n < want) {
+      const r = Math.floor(rand() * N), c = Math.floor(rand() * (N / 2)), color = 1 + Math.floor(rand() * COLORS.length);
+      for (const cc of [c, N - 1 - c]) if (!board[r][cc]) { board[r][cc] = color; goal[r][cc] = 1; n++; }
+    }
+    // No row or column may start full.
+    const full = board.some(row => row.every(Boolean)) || board[0].some((_, i) => board.every(row => row[i]));
+    if (!full || attempt > 50) return { board, goal };
+  }
+}
+const starsLeft = g => g.goal.flat().filter(Boolean).length;
+const sceneBonus = scene => 100 * scene;
+
+function newGame(rand = Math.random) {
+  const g = { score: 0, streak: 0, over: false, complete: false, scene: 0, scenesDone: 0, rand };
+  nextScene(g);
+  return g;
+}
+// Starts the next scene: a new picture of star blocks and three new shapes. The score carries on.
+function nextScene(g) {
+  g.scene++;
+  const l = sceneLayout(g.scene, g.rand);
+  g.board = l.board; g.goal = l.goal; g.complete = false; g.streak = 0;
+  g.tray = deal(g.board, g.rand);
+  g.over = !g.tray.some(t => fitsAnywhere(g.board, t.cells));
+}
 // Plays tray piece i at (r, c). Returns the clear result, or null if it doesn't fit.
 function play(g, i, r, c) {
   const p = g.tray[i];
-  if (g.over || !p || !canPlace(g.board, p.cells, r, c)) return null;
+  if (g.over || g.complete || !p || !canPlace(g.board, p.cells, r, c)) return null;
   const res = place(g.board, p.cells, r, c, p.color);
   g.board = res.board;
+  const before = starsLeft(g);
+  for (const i of res.rows) g.goal[i].fill(0);
+  for (const i of res.cols) for (const row of g.goal) row[i] = 0;
+  res.stars = before - starsLeft(g);
   g.streak = res.lines ? g.streak + 1 : 0;
   res.points = pointsFor(p.cells.length, res.lines, g.streak);
   g.score += res.points;
   g.tray[i] = null;
+  if (!starsLeft(g)) {
+    // Scene finished! Bonus points; the player starts the next scene when ready.
+    g.complete = true; g.scenesDone++;
+    res.sceneDone = true; res.bonus = sceneBonus(g.scene);
+    g.score += res.bonus;
+    return res;
+  }
   if (g.tray.every(t => !t)) g.tray = deal(g.board, g.rand);
   g.over = !g.tray.some(t => t && fitsAnywhere(g.board, t.cells));
   return res;
 }
 
 if (typeof document === "undefined") {
-  module.exports = { N, COLORS, BASE, SHAPES, sizeOf, emptyBoard, canPlace, place, fitsAnywhere, pointsFor, randomPiece, deal, newGame, play };
+  module.exports = { N, COLORS, BASE, SHAPES, sizeOf, emptyBoard, canPlace, place, fitsAnywhere, pointsFor, randomPiece, deal, sceneLayout, starsLeft, sceneBonus, newGame, nextScene, play };
 } else {
 // ---------- Page ----------
 const $ = id => document.getElementById(id);
 const boardEl = $("grid"), trayEl = $("tray");
-const BEST_KEY = "blockfit-best";
+const BEST_KEY = "blockfit-best", SCENES_KEY = "blockfit-best-scenes";
 const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
 const best = () => +store.get(BEST_KEY) || 0;
+const bestScenes = () => +store.get(SCENES_KEY) || 0;
 let g = null, sel = -1, drag = null, busy = false;
 window.__blockfit = () => g;
 
-function showBest() { const b = best(); $("best").textContent = b ? "Best score: " + b : ""; }
+function showBest() {
+  const b = best(), sc = bestScenes();
+  $("best").textContent = b ? "Best score: " + b + (sc ? " \u00b7 Most scenes: " + sc : "") : "";
+}
 showBest();
 
 // Board: 64 cells, built once.
@@ -217,10 +279,11 @@ for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
   boardEl.appendChild(d); cells.push(d);
 }
 const cellAt = (r, c) => cells[r * N + c];
-const paint = (el, v) => { el.className = v ? "cell blk" : "cell"; el.style.background = v ? COLORS[v - 1] : ""; };
+// Yellow (color 2) needs a dark star.
+const paint = (el, v, goal) => { el.className = (v ? "cell blk" : "cell") + (v && goal ? " goal" + (v === 2 ? " dk" : "") : ""); el.style.background = v ? COLORS[v - 1] : ""; };
 
 function renderBoard() {
-  g.board.forEach((row, r) => row.forEach((v, c) => paint(cellAt(r, c), v)));
+  g.board.forEach((row, r) => row.forEach((v, c) => paint(cellAt(r, c), v, g.goal[r][c])));
 }
 function pieceHTML(p, size, gap) {
   const { w, h } = sizeOf(p.cells), on = new Set(p.cells.map(q => q.join(",")));
@@ -232,15 +295,16 @@ function pieceHTML(p, size, gap) {
 function renderTray() {
   trayEl.innerHTML = g.tray.map((p, i) => {
     if (!p) return `<div class="slot"></div>`;
-    const fit = fitsAnywhere(g.board, p.cells), { w, h } = sizeOf(p.cells);
+    const fit = !g.complete && fitsAnywhere(g.board, p.cells), { w, h } = sizeOf(p.cells);
     return `<button class="slot${i === sel ? " sel" : ""}${fit ? "" : " nofit"}" data-i="${i}" aria-label="Shape ${i + 1}, ${p.cells.length} blocks, ${w} wide and ${h} tall">${pieceHTML(p, 18, 2)}</button>`;
   }).join("");
 }
 function render() {
   renderBoard(); renderTray();
   $("score").textContent = g.score;
-  $("bestNow").textContent = Math.max(best(), g.score);
+  $("scene").textContent = g.scene; $("left").textContent = starsLeft(g); $("done").textContent = g.scenesDone;
 }
+window.__blockfitRender = () => render();
 
 // Preview: shows where a shape would land and which lines it would clear.
 function clearPreview() { renderBoard(); }
@@ -249,7 +313,7 @@ function preview(i, r, c) {
   const p = g.tray[i];
   if (!p || !canPlace(g.board, p.cells, r, c)) return false;
   const res = place(g.board, p.cells, r, c, p.color);
-  for (const [dr, dc] of p.cells) { const el = cellAt(r + dr, c + dc); paint(el, p.color); el.classList.add("ghost"); }
+  for (const [dr, dc] of p.cells) { const el = cellAt(r + dr, c + dc); paint(el, p.color, 0); el.classList.add("ghost"); }
   for (const y of res.rows) for (let x = 0; x < N; x++) { const el = cellAt(y, x); if (!g.board[y][x]) paint(el, p.color); el.classList.add("willclear"); }
   for (const x of res.cols) for (let y = 0; y < N; y++) { const el = cellAt(y, x); if (!g.board[y][x]) paint(el, p.color); el.classList.add("willclear"); }
   return true;
@@ -258,20 +322,21 @@ function preview(i, r, c) {
 function say(text) { $("msg").textContent = text; }
 function tryPlay(i, r, c) {
   if (busy) return false;
-  const before = g.board, p = g.tray[i];
+  const before = g.board, goalBefore = g.goal.map(row => row.slice()), p = g.tray[i];
   const res = play(g, i, r, c);
   if (!res) return false;
   sel = -1;
   if (res.lines) {
-    say((res.lines > 1 ? res.lines + " lines! " : "Line! ") + (g.streak > 1 ? "Combo x" + g.streak + " " : "") + "+" + res.points);
+    if (!res.sceneDone && res.stars) say((res.stars === 1 ? "1 star" : res.stars + " stars") + " cleared! " + starsLeft(g) + " to go. +" + res.points);
+    else say((res.lines > 1 ? res.lines + " lines! " : "Line! ") + (g.streak > 1 ? "Combo x" + g.streak + " " : "") + "+" + res.points);
     renderTray(); $("score").textContent = g.score;
     // Draw the board with the new shape on it, then let the full lines pop before showing the result.
-    before.forEach((row, y) => row.forEach((v, x) => paint(cellAt(y, x), v)));
+    before.forEach((row, y) => row.forEach((v, x) => paint(cellAt(y, x), v, goalBefore[y][x])));
     for (const [dr, dc] of p.cells) paint(cellAt(r + dr, c + dc), p.color);
     for (const y of res.rows) for (let x = 0; x < N; x++) cellAt(y, x).classList.add("pop");
     for (const x of res.cols) for (let y = 0; y < N; y++) cellAt(y, x).classList.add("pop");
     busy = true;
-    setTimeout(() => { busy = false; render(); checkOver(); }, 280);
+    setTimeout(() => { busy = false; render(); if (res.sceneDone) celebrate(res.bonus); else checkOver(); }, 280);
   } else {
     say("");
     render(); checkOver();
@@ -282,19 +347,66 @@ function checkOver() {
   if (!g.over) return;
   const b = best(), isBest = g.score > b;
   if (isBest) store.set(BEST_KEY, g.score);
-  say("No more room! " + (isBest && g.score > 0 ? "New best score: " + g.score + "!" : "You scored " + g.score + ". Try again!"));
+  if (g.scenesDone > bestScenes()) store.set(SCENES_KEY, g.scenesDone);
+  const scenes = g.scenesDone === 1 ? "1 scene" : g.scenesDone + " scenes";
+  say("No more room! You finished " + scenes + " and scored " + g.score + "." + (isBest && g.score > 0 ? " New best score!" : ""));
+  $("againBtn").textContent = "Play again";
   $("actions").classList.remove("hidden");
+}
+const reduceMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+function clearParty() { document.querySelectorAll(".confetti, .banner").forEach(e => e.remove()); }
+// Scene finished: the board does a wave, confetti flies and a banner pops up.
+function celebrate(bonus) {
+  const board = boardEl.parentElement;
+  clearParty();
+  if (!reduceMotion()) {
+    // Light up the whole board in a wave from the top-left corner.
+    cells.forEach(el => {
+      const r = +el.dataset.r, c = +el.dataset.c;
+      if (!el.style.background) { el.style.background = COLORS[(r + c) % COLORS.length]; el.classList.add("blk"); }
+      el.style.animationDelay = (r + c) * 45 + "ms"; el.classList.add("wave");
+    });
+    for (let i = 0; i < 48; i++) {
+      const f = document.createElement("i");
+      f.className = "confetti";
+      const a = Math.random() * Math.PI * 2, d = 120 + Math.random() * 160;
+      f.style.background = COLORS[i % COLORS.length];
+      f.style.setProperty("--dx", Math.cos(a) * d + "px");
+      f.style.setProperty("--dy", Math.sin(a) * d + 80 + "px");
+      f.style.setProperty("--rot", (Math.random() * 720 - 360) + "deg");
+      f.style.animationDelay = Math.random() * 150 + "ms";
+      board.appendChild(f);
+    }
+  }
+  const b = document.createElement("div");
+  b.className = "banner";
+  b.innerHTML = `<b>Scene ${g.scene} complete!</b><span>+${bonus} bonus points</span>`;
+  board.appendChild(b);
+  if (g.scenesDone > bestScenes()) store.set(SCENES_KEY, g.scenesDone);
+  if (g.score > best()) store.set(BEST_KEY, g.score);
+  say("You cleared every star! " + (g.scenesDone === 1 ? "1 scene" : g.scenesDone + " scenes") + " done.");
+  $("againBtn").innerHTML = "Next scene &rarr;";
+  $("actions").classList.remove("hidden");
+  renderTray();
 }
 
 function start() {
   g = newGame(); sel = -1; busy = false;
   $("menu").classList.add("hidden"); $("game").classList.remove("hidden"); $("actions").classList.add("hidden");
-  say("Drag a shape onto the grid, or tap a shape then tap a square.");
+  clearParty();
+  say("Clear all " + starsLeft(g) + " star blocks by filling their rows or columns.");
   render();
 }
-function toMenu() { g = null; showBest(); $("game").classList.add("hidden"); $("menu").classList.remove("hidden"); }
+function toMenu() { clearParty(); g = null; showBest(); $("game").classList.add("hidden"); $("menu").classList.remove("hidden"); }
 $("playBtn").onclick = start;
-$("againBtn").onclick = start;
+$("againBtn").onclick = () => {
+  if (g && g.complete) {
+    clearParty(); nextScene(g); sel = -1;
+    $("actions").classList.add("hidden");
+    say("Scene " + g.scene + ": clear all " + starsLeft(g) + " star blocks.");
+    render();
+  } else start();
+};
 $("menuBtn").onclick = toMenu;
 
 // Cell size on screen, measured from the board.
@@ -306,7 +418,7 @@ function metrics() {
 // Dragging a shape from the tray.
 trayEl.addEventListener("pointerdown", e => {
   const slot = e.target.closest(".slot[data-i]");
-  if (!slot || !g || g.over || busy) return;
+  if (!slot || !g || g.over || g.complete || busy) return;
   e.preventDefault();
   const i = +slot.dataset.i, p = g.tray[i], m = metrics(), { w, h } = sizeOf(p.cells);
   const el = document.createElement("div");
@@ -344,7 +456,7 @@ trayEl.addEventListener("pointercancel", e => endDrag(e, true));
 // Tap-to-place: tap a shape, then tap a cell for its top-left block. Hover shows a preview.
 boardEl.addEventListener("click", e => {
   const el = e.target.closest(".cell");
-  if (!el || !g || sel < 0) return;
+  if (!el || !g || sel < 0 || g.complete || busy) return;
   const r = +el.dataset.r, c = +el.dataset.c, p = g.tray[sel];
   // Anchor the shape's first block (top row) on the tapped cell.
   const [r0, c0] = p.cells[0];

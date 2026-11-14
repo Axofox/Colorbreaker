@@ -37,10 +37,10 @@ async function startWithWrongTile(p, level) {
   throw new Error('no puzzle with a wrong tile');
 }
 
-test('games menu links to both games', { skip }, async () => {
+test('games menu links to all games', { skip }, async () => {
   const p = await open(['index.html']);
   const links = await p.$$eval('a.game', as => as.map(a => a.getAttribute('href')));
-  assert.deepEqual(links, ['colorbreaker/index.html', 'numbercross/index.html', 'blockfit/index.html']);
+  assert.deepEqual(links, ['colorbreaker/index.html', 'numbercross/index.html', 'colorpop/index.html', 'blockfit/index.html', 'colorrides/index.html']);
   await p.click('a.game >> nth=1');
   assert.equal(await p.title(), 'Number Cross');
   await p.click('a.back');
@@ -239,5 +239,24 @@ test('sideways phone shows the rotate message', { skip }, async () => {
   const p = await open(undefined, { width: 844, height: 390 });
   assert.ok(await p.isVisible('#rotate'));
   assert.ok(!(await p.isVisible('#menu')));
+  await done(p);
+});
+
+test('solved puzzles are saved: the count stays after leaving and reloading', { skip }, async () => {
+  const p = await open();
+  const solveOne = async () => { const n = (await state(p)).blanks; for (let i = 0; i < n; i++) await right(p); };
+  await p.click('[data-level=easy]');
+  await solveOne();
+  await p.click('#next');
+  await solveOne();
+  assert.equal(await p.textContent('#solved'), '2');
+  await p.click('#menuBtn');
+  await p.click('[data-level=medium]');
+  assert.equal(await p.textContent('#solved'), '0', 'each level has its own count');
+  await solveOne();
+  await p.reload();
+  assert.match(await p.textContent('#best'), /Puzzles solved: 3 \(Easy 2 · Medium 1\)/);
+  await p.click('[data-level=easy]');
+  assert.equal(await p.textContent('#solved'), '2', 'the count carries over after a reload');
   await done(p);
 });
