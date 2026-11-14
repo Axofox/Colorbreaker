@@ -1,7 +1,7 @@
 {
   "name": "Color Games",
   "short_name": "Color Games",
-  "description": "Simple, colorful games: Color Breaker, Number Cross, Color Pop, Block Fit and Color Rides.",
+  "description": "Simple, colorful games: Color Breaker, Number Cross, Color Pop, Block Fit, Color Rides and Mahjong Pairs.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

@@ -369,7 +369,7 @@ test('a cracked code is a stage: Next code keeps the score; out of tries shows t
   assert.match(await text(p, '#goReason'), /Out of tries\. The secret code was white, pink, yellow, green\./);
   assert.equal(await text(p, '#goStages'), '1');
   assert.equal(await text(p, '#goStagesLabel'), 'codes cracked');
-  await p.waitForTimeout(800);
+  await p.waitForTimeout(1000);
   await p.click('#gameover');                                // tap anywhere to play again
   assert.ok(!(await p.isVisible('#gameover')));
   assert.equal(await text(p, '#stage'), '1');

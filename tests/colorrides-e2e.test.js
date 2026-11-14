@@ -29,6 +29,9 @@ const state = p => p.evaluate(() => JSON.parse(JSON.stringify(window.__colorride
 const idle = p => p.waitForFunction(() => !window.__colorridesBusy());
 const rightCar = async p => { const s = await state(p); return s.cars.find(c => c.key === s.rider).id; };
 const wrongCar = async p => { const s = await state(p); return s.cars.find(c => c.key !== s.rider).id; };
+// Records every class name added to the page, so short animation pieces (sparks, smoke) are noticed even on a slow machine.
+const watch = p => p.evaluate(() => { window.__seen = new Set(); new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(n => n.classList && n.classList.forEach(c => window.__seen.add(c))))).observe(document.body, { childList: true, subtree: true }); });
+const seen = p => p.evaluate(() => [...window.__seen]);
 
 test('math: one passenger with a number; a wrong car explains and costs a heart; the right car picks them up', { skip }, async () => {
   const p = await open();
@@ -70,7 +73,7 @@ test('math: 3 wrong cars show the animated game-over card; tapping starts again'
   await p.waitForSelector('#gameover.show');
   assert.match(await p.textContent('#goReason'), /3 wrong cars\. The last one was .* = \d+, but the passenger needed \d+\./);
   assert.equal(await p.textContent('#goStages'), '0');
-  await p.waitForTimeout(800);
+  await p.waitForTimeout(1000);
   await p.click('#gameover');
   assert.ok(!(await p.isVisible('#gameover')));
   const s = await state(p);
@@ -82,11 +85,13 @@ test('math with animations on: the car drives to the passenger, they get in, it 
   const p = await open({ motion: true });
   await p.click('[data-mode=easy]');
   await p.waitForTimeout(600);
+  await watch(p);
   await p.click(`.gcar[data-id="${await rightCar(p)}"]`);
-  await p.waitForSelector('.flyer');
   assert.ok(await p.evaluate(() => window.__colorridesBusy()));
-  await p.waitForSelector('.smoke', { timeout: 5000 });
   await idle(p);
+  const pieces = await seen(p);
+  assert.ok(pieces.includes('flyer'), 'the car drove to the passenger');
+  assert.ok(pieces.includes('smoke'), 'it left a puff of smoke');
   assert.equal(await p.locator('.flyer').count(), 0, 'animation pieces are cleaned up');
   assert.equal((await state(p)).served, 1);
   await done(p);
@@ -129,7 +134,7 @@ test('colors: a blocked car shakes and stays; four spots full with nobody fittin
   await p.waitForSelector('#gameover.show', { timeout: 5000 });
   assert.match(await p.textContent('#goReason'), /All 4 parking spots were full/);
   assert.equal(await p.textContent('#goStages'), '0');
-  await p.waitForTimeout(800);
+  await p.waitForTimeout(1000);
   await p.click('#gameover');
   assert.ok(!(await p.isVisible('#gameover')));
   assert.deepEqual((await state(p)).slots, [null, null, null, null]);
@@ -153,4 +158,35 @@ test('both versions fit phone and desktop screens with no scrolling', { skip }, 
       await done(p);
     }
   }
+});
+
+test('the game-over card is a real animation: it falls from the top and bounces, pieces tumble, letters pop in', { skip }, async () => {
+  const p = await open({ motion: true });
+  await p.click('[data-mode=hard]');
+  await p.waitForTimeout(600);
+  for (let i = 0; i < 3; i++) await p.click(`.gcar[data-id="${await wrongCar(p)}"]`);
+  await p.waitForSelector('#gameover.show');
+  const top = () => p.evaluate(() => document.querySelector('.go-card').getBoundingClientRect().top);
+  // The card's animation starts it above the screen and lasts about a second.
+  const drop = await p.evaluate(() => { const a = document.querySelector('.go-card').getAnimations()[0]; return a && { name: a.animationName, first: a.effect.getKeyframes()[0].transform, ms: a.effect.getTiming().duration }; });
+  assert.equal(drop.name, 'goDrop');
+  const startY = drop.first.match(/translateY\((-?[\d.]+)(px|vh)\)/);
+  assert.ok(startY && (startY[2] === 'vh' ? +startY[1] <= -100 : +startY[1] <= -600), `starts well above the screen (${drop.first})`);
+  assert.ok(drop.ms >= 1000, 'slow enough to see');
+  assert.ok(await p.locator('.go-piece').count() > 10, 'game pieces tumble down');
+  assert.equal(await p.locator('#goTitle span').count(), 9, '"Game over" pops in letter by letter');
+  await p.waitForTimeout(1500);
+  const landed = await top();
+  assert.ok(landed > 100, `the card has landed (top ${landed})`);
+  await done(p);
+});
+
+test('with Reduce Motion the game-over card just fades in, with no falling pieces', { skip }, async () => {
+  const p = await open({ motion: false });
+  await p.click('[data-mode=hard]');
+  for (let i = 0; i < 3; i++) await p.click(`.gcar[data-id="${await wrongCar(p)}"]`);
+  await p.waitForSelector('#gameover.show');
+  assert.ok(await p.evaluate(() => document.querySelector('.go-card').getBoundingClientRect().top) > 100);
+  assert.equal(await p.locator('.go-piece').count(), 0);
+  await done(p);
 });

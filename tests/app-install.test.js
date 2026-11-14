@@ -6,7 +6,7 @@ const http = require('node:http');
 const path = require('node:path');
 
 const PUBLIC = path.join(__dirname, '..', 'public');
-const PAGES = ['index.html', 'colorbreaker/index.html', 'numbercross/index.html', 'colorpop/index.html', 'blockfit/index.html', 'colorrides/index.html'];
+const PAGES = ['index.html', 'colorbreaker/index.html', 'numbercross/index.html', 'colorpop/index.html', 'blockfit/index.html', 'colorrides/index.html', 'mahjong/index.html'];
 const read = f => fs.readFileSync(path.join(PUBLIC, f), 'utf8');
 const pngSize = f => { const b = fs.readFileSync(path.join(PUBLIC, f)); assert.equal(b.toString('ascii', 1, 4), 'PNG', f); return [b.readUInt32BE(16), b.readUInt32BE(20)]; };
 
@@ -70,16 +70,16 @@ test('after one visit, every game opens with the internet off', { skip }, async 
     const errors = []; p.on('pageerror', e => errors.push(e.message));
     await p.goto(base);
     await p.evaluate(() => navigator.serviceWorker.ready);
-    await p.waitForFunction(async () => (await caches.keys()).length > 0 && (await (await caches.open((await caches.keys())[0])).keys()).length >= 15);
+    await p.waitForFunction(async () => (await caches.keys()).length > 0 && (await (await caches.open((await caches.keys())[0])).keys()).length >= 16);
     await ctx.setOffline(true);
     await p.reload();
     assert.equal(await p.title(), 'Games');
-    for (const [href, title] of [['colorbreaker/index.html', 'Color Breaker'], ['numbercross/index.html', 'Number Cross'], ['colorpop/index.html', 'Color Pop'], ['blockfit/index.html', 'Block Fit'], ['colorrides/index.html', 'Color Rides']]) {
+    for (const [href, title] of [['colorbreaker/index.html', 'Color Breaker'], ['numbercross/index.html', 'Number Cross'], ['colorpop/index.html', 'Color Pop'], ['blockfit/index.html', 'Block Fit'], ['colorrides/index.html', 'Color Rides'], ['mahjong/index.html', 'Mahjong Pairs']]) {
       await p.goto(base + href);
       assert.equal(await p.title(), title, `${href} offline`);
     }
-    await p.click('[data-mode=easy]');                       // a game really runs offline
-    assert.ok(await p.isVisible('#garage'));
+    await p.click('#playBtn');                               // a game really runs offline
+    assert.ok(await p.locator('#stack .tile').count() >= 24);
     assert.deepEqual(errors, []);
   } finally { await browser.close(); server.close(); }
 });
