@@ -89,7 +89,7 @@ test('a wrong number costs a try and the box stays empty', { skip }, async () =>
   await done(p);
 });
 
-test('three wrong numbers load a new puzzle with 3 tries and 2 hints again', { skip }, async () => {
+test('three wrong numbers show the game-over card; tapping starts a new puzzle with 3 tries and 2 hints', { skip }, async () => {
   const p = await open();
   await startWithWrongTile(p, 'medium');
   const first = (await state(p)).cells;
@@ -102,7 +102,14 @@ test('three wrong numbers load a new puzzle with 3 tries and 2 hints again', { s
   assert.match(await p.textContent('#msg'), /3 wrong tries/);
   assert.equal(await p.textContent('#tries'), '0');
   assert.ok(await p.locator('.tile').first().isDisabled(), 'no more guessing while waiting');
-  await p.waitForFunction(() => document.getElementById('tries').textContent === '3', null, { timeout: 5000 });
+  await p.waitForSelector('#gameover.show');
+  assert.match(await p.textContent('#goReason'), /3 wrong numbers\. That box needed \d+\./);
+  assert.equal(await p.textContent('#goStages'), '0');
+  assert.equal(await p.textContent('#goStagesLabel'), 'puzzles solved');
+  await p.waitForTimeout(800);
+  await p.click('#gameover');
+  assert.equal(await p.textContent('#tries'), '3');
+  assert.equal(await p.textContent('#stage'), '1');
   assert.notEqual((await state(p)).cells, first, 'the puzzle changed');
   assert.equal(await p.textContent('#hints'), '2');
   assert.equal(await p.textContent('#solved'), '0');

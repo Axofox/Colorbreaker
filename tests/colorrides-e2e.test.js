@@ -13,11 +13,13 @@ let browser;
 test.before(async () => { if (chromium) browser = await chromium.launch(); });
 test.after(async () => { if (browser) await browser.close(); });
 
-async function open({ width = 390, height = 844 } = {}) {
+// motion: false turns animations off; tick sets how fast the walking loop moves (ms per step).
+async function open({ width = 390, height = 844, motion = false, tick = 15 } = {}) {
   const phone = width < 800;
-  const ctx = await browser.newContext({ viewport: { width, height }, hasTouch: phone, isMobile: phone, reducedMotion: 'reduce' });
+  const ctx = await browser.newContext({ viewport: { width, height }, hasTouch: phone, isMobile: phone, reducedMotion: motion ? 'no-preference' : 'reduce' });
   const page = await ctx.newPage();
   page.errors = []; page.on('pageerror', e => page.errors.push(e.message));
+  await page.addInitScript(t => { window.__crTick = t; }, tick);
   await page.goto(URL);
   page.ctx = ctx;
   return page;
@@ -25,87 +27,130 @@ async function open({ width = 390, height = 844 } = {}) {
 const done = async p => { assert.deepEqual(p.errors, []); await p.ctx.close(); };
 const state = p => p.evaluate(() => JSON.parse(JSON.stringify(window.__colorrides())));
 const idle = p => p.waitForFunction(() => !window.__colorridesBusy());
+const rightCar = async p => { const s = await state(p); return s.cars.find(c => c.key === s.rider).id; };
+const wrongCar = async p => { const s = await state(p); return s.cars.find(c => c.key !== s.rider).id; };
 
-// Taps the cars in the known winning order.
-async function solve(p) {
+test('math: one passenger with a number; a wrong car explains and costs a heart; the right car picks them up', { skip }, async () => {
+  const p = await open();
+  await p.click('[data-mode=easy]');
   const s = await state(p);
-  for (const id of s.order) { await p.click(`.car[data-id="${id}"]`); await idle(p); }
-}
+  assert.equal(await p.textContent('#rider .pp b'), String(s.rider));
+  assert.equal(await p.locator('.gcar').count(), s.cars.length);
+  assert.equal(await p.locator('#hearts .gone').count(), 0);
+  await p.click(`.gcar[data-id="${await wrongCar(p)}"]`);
+  assert.match(await p.textContent('#msg'), new RegExp(`= \\d+\\. We need ${s.rider}!`));
+  assert.equal(await p.locator('#hearts .gone').count(), 1);
+  await p.click(`.gcar[data-id="${await rightCar(p)}"]`); await idle(p);
+  const after = await state(p);
+  assert.equal(after.served, 1);
+  assert.equal(await p.textContent('#pnum'), '2');
+  assert.equal(await p.textContent('#rider .pp b'), String(after.rider));
+  await done(p);
+});
 
-for (const mode of ['colors', 'easy', 'hard']) {
-  test(`${mode}: tapping the cars in the right order wins and unlocks level 2`, { skip }, async () => {
-    const p = await open();
-    await p.click(`[data-mode=${mode}]`);
-    const s = await state(p);
-    assert.equal(await p.locator('.car').count(), s.cars.length);
-    assert.equal(await p.textContent('#waiting'), String(s.queue.length));
-    if (mode !== 'colors') {
-      // cars show their sum, people show answers
-      const first = s.cars[0];
-      assert.match(await p.textContent(`.car[data-id="${first.id}"]`), new RegExp(String(first.eq[0])));
-      assert.equal(await p.textContent('#queue .pp b'), String(s.queue[0]));
-    }
-    await solve(p);
-    await p.waitForFunction(() => document.getElementById('waiting').textContent === '0');
-    assert.match(await p.textContent('#msg'), /Everyone got a ride/);
-    await p.click('#nextBtn');
-    assert.equal(await p.textContent('#level'), '2');
-    await p.click('#menuBtn');
-    assert.match(await p.textContent(`[data-mode=${mode}]`), /Level 2/);
-    await done(p);
-  });
-}
+test('math: picking every passenger completes the stage; Next stage goes on; best is saved', { skip }, async () => {
+  const p = await open();
+  await p.click('[data-mode=medium]');
+  const riders = (await state(p)).riders;
+  for (let i = 0; i < riders; i++) { await p.click(`.gcar[data-id="${await rightCar(p)}"]`); await idle(p); }
+  await p.waitForSelector('.stagebanner');
+  assert.match(await p.textContent('.stagebanner'), /Stage 1 complete!/);
+  await p.click('#nextBtn');
+  assert.equal(await p.textContent('#stage'), '2');
+  assert.equal(await p.locator('.gcar').count(), (await state(p)).cars.length);
+  await p.click('#menuBtn');
+  assert.match(await p.textContent('[data-mode=medium]'), /Best: 1 stage/);
+  await done(p);
+});
 
-test('a blocked car shakes and stays; a free car parks in a spot', { skip }, async () => {
+test('math: 3 wrong cars show the animated game-over card; tapping starts again', { skip }, async () => {
+  const p = await open();
+  await p.click('[data-mode=hard]');
+  for (let i = 0; i < 3; i++) await p.click(`.gcar[data-id="${await wrongCar(p)}"]`);
+  await p.waitForSelector('#gameover.show');
+  assert.match(await p.textContent('#goReason'), /3 wrong cars\. The last one was .* = \d+, but the passenger needed \d+\./);
+  assert.equal(await p.textContent('#goStages'), '0');
+  await p.waitForTimeout(800);
+  await p.click('#gameover');
+  assert.ok(!(await p.isVisible('#gameover')));
+  const s = await state(p);
+  assert.equal(s.hearts, 3); assert.equal(s.stage, 1);
+  await done(p);
+});
+
+test('math with animations on: the car drives to the passenger, they get in, it drives off with smoke', { skip }, async () => {
+  const p = await open({ motion: true });
+  await p.click('[data-mode=easy]');
+  await p.waitForTimeout(600);
+  await p.click(`.gcar[data-id="${await rightCar(p)}"]`);
+  await p.waitForSelector('.flyer');
+  assert.ok(await p.evaluate(() => window.__colorridesBusy()));
+  await p.waitForSelector('.smoke', { timeout: 5000 });
+  await idle(p);
+  assert.equal(await p.locator('.flyer').count(), 0, 'animation pieces are cleaned up');
+  assert.equal((await state(p)).served, 1);
+  await done(p);
+});
+
+test('colors: people walk round; tapping the cars in the planned order wins the stage', { skip }, async () => {
   const p = await open();
   await p.click('[data-mode=colors]');
   const s = await state(p);
-  const blocked = await p.evaluate(() => { const g = window.__colorrides(); return g.cars.find(c => { const occ = new Set(); g.cars.forEach(o => { if (o.id !== c.id) { const hor = o.dir === 'L' || o.dir === 'R'; for (let i = 0; i < o.len; i++) occ.add(hor ? (o.x + i) + ',' + o.y : o.x + ',' + (o.y + i)); } });
-    const d = { U: [0, -1], D: [0, 1], L: [-1, 0], R: [1, 0] }[c.dir]; let x = c.dir === 'R' ? c.x + c.len - 1 : c.x, y = c.dir === 'D' ? c.y + c.len - 1 : c.y;
-    for (;;) { x += d[0]; y += d[1]; if (x < 0 || y < 0 || x >= g.w || y >= g.h) return false; if (occ.has(x + ',' + y)) return true; } }); });
-  if (blocked) {
-    await p.click(`.car[data-id="${blocked.id}"]`);
-    assert.match(await p.textContent('#msg'), /blocked/);
-    assert.ok(!(await state(p)).cars[blocked.id].gone);
+  assert.ok(s.cars.length >= 14);
+  assert.equal(await p.locator('.car').count(), s.cars.length);
+  assert.equal(await p.locator('#slots > div').count(), 4);
+  const pos = () => p.evaluate(() => [...document.querySelectorAll('#walkers .pp')].map(e => e.style.transform).join());
+  const a = await pos(); await p.waitForTimeout(80);
+  assert.notEqual(await pos(), a, 'people are moving round the loop');
+  for (const id of s.order) {
+    await p.waitForFunction(() => { const g = window.__colorrides(); return !g || g.slots.includes(null) || !document.querySelector('.car'); }, null, { timeout: 15000 });
+    if (await p.locator('.stagebanner').count()) break;
+    await p.click(`.car[data-id="${id}"]`);
   }
-  await p.click(`.car[data-id="${s.order[0]}"]`); await idle(p);
-  assert.ok((await state(p)).cars[s.order[0]].gone);
+  await p.waitForSelector('.stagebanner', { timeout: 20000 });
+  assert.match(await p.textContent('.stagebanner'), /Stage 1 complete!/);
+  await p.click('#nextBtn');
+  assert.equal(await p.textContent('#stage'), '2');
   await done(p);
 });
 
-test('with animations on, a car glides into a spot and people hop in; the game still wins', { skip }, async () => {
-  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
-  const p = await ctx.newPage();
-  p.errors = []; p.on('pageerror', e => p.errors.push(e.message));
-  await p.goto(URL); p.ctx = ctx;
+test('colors: a blocked car shakes and stays; four spots full with nobody fitting is game over', { skip }, async () => {
+  const p = await open({ tick: 40 });
   await p.click('[data-mode=colors]');
-  const s = await state(p);
-  await p.click(`.car[data-id="${s.order[0]}"]`);
-  await p.waitForSelector('.flyer');                       // the car is on its way to a spot
-  assert.ok(await p.evaluate(() => window.__colorridesBusy()));
-  await p.click(`.car[data-id="${s.order[1]}"]`);           // taps while busy are ignored
-  await idle(p);
-  const after = await state(p);
-  assert.ok(after.cars[s.order[0]].gone);
-  assert.ok(!after.cars[s.order[1]].gone, 'second tap during the animation was ignored');
-  assert.equal(await p.locator('.flyer, .hopper').count(), 0, 'animation pieces are cleaned up');
-  for (const id of s.order.slice(1)) { await p.click(`.car[data-id="${id}"]`); await idle(p); }
-  assert.match(await p.textContent('#msg'), /Everyone got a ride/);
+  const blocked = await p.evaluate(() => { const g = window.__colorrides();
+    const occ = {}; g.cars.forEach(o => { const hor = o.dir === 'L' || o.dir === 'R'; for (let i = 0; i < o.len; i++) occ[hor ? (o.x + i) + ',' + o.y : o.x + ',' + (o.y + i)] = o.id; });
+    return g.cars.find(c => { const d = { U: [0, -1], D: [0, 1], L: [-1, 0], R: [1, 0] }[c.dir]; let x = c.dir === 'R' ? c.x + c.len - 1 : c.x, y = c.dir === 'D' ? c.y + c.len - 1 : c.y;
+      for (;;) { x += d[0]; y += d[1]; if (x < 0 || y < 0 || x >= g.w || y >= g.h) return false; if (occ[x + ',' + y] !== undefined) return true; } }); });
+  await p.click(`.car[data-id="${blocked.id}"]`);
+  assert.match(await p.textContent('#msg'), /blocked/);
+  assert.ok(!(await state(p)).cars[blocked.id].gone);
+  // Fill all 4 spots with cars of a color nobody has.
+  await p.evaluate(() => { const g = window.__colorrides(); g.slots = [0, 1, 2, 3].map(i => ({ id: 900 + i, key: 9, color: 0, seats: 4, filled: 0, at: 90 + i })); });
+  await p.waitForSelector('#gameover.show', { timeout: 5000 });
+  assert.match(await p.textContent('#goReason'), /All 4 parking spots were full/);
+  assert.equal(await p.textContent('#goStages'), '0');
+  await p.waitForTimeout(800);
+  await p.click('#gameover');
+  assert.ok(!(await p.isVisible('#gameover')));
+  assert.deepEqual((await state(p)).slots, [null, null, null, null]);
   await done(p);
 });
 
-test('fits phone and desktop screens with no scrolling', { skip }, async () => {
+test('both versions fit phone and desktop screens with no scrolling', { skip }, async () => {
   for (const [w, h] of [[375, 667], [390, 844], [1280, 800]]) {
-    const p = await open({ width: w, height: h });
-    const back = await p.locator('#menu .back').boundingBox();
-    const logo = await p.locator('#menu .logo').boundingBox();
-    assert.ok(logo.y >= 0 && back.y + back.height <= h, `whole menu on screen at ${w}x${h}`);
-    await p.click('[data-mode=medium]');
-    const r = await p.evaluate(() => { const l = document.getElementById('lot').getBoundingClientRect(), m = document.getElementById('msg').getBoundingClientRect();
-      return { lw: l.width, lh: l.height, lb: l.bottom, mb: m.bottom, sw: document.documentElement.scrollWidth, cw: innerWidth }; });
-    assert.ok(r.mb <= h, `message on screen at ${w}x${h}`);
-    assert.ok(Math.abs(r.lw - r.lh) < 2 && r.lw >= 240, 'car park is square and big enough');
-    assert.equal(r.sw, r.cw);
-    await done(p);
+    for (const mode of ['colors', 'easy']) {
+      const p = await open({ width: w, height: h });
+      const back = await p.locator('#menu .back').boundingBox(), logo = await p.locator('#menu .logo').boundingBox();
+      assert.ok(logo.y >= 0 && back.y + back.height <= h, `whole menu on screen at ${w}x${h}`);
+      await p.click(`[data-mode=${mode}]`);
+      const r = await p.evaluate(m => {
+        const box = document.getElementById(m === 'colors' ? 'lot' : 'garage').getBoundingClientRect(), msg = document.getElementById('msg').getBoundingClientRect();
+        return { bw: box.width, bh: box.height, bottom: box.bottom, mb: msg.bottom, sw: document.documentElement.scrollWidth, cw: innerWidth };
+      }, mode);
+      assert.ok(r.mb <= h + 1, `message on screen (${mode} ${w}x${h})`);
+      assert.ok(r.bw >= 240, `play area big enough (${mode} ${w}x${h}: ${r.bw})`);
+      assert.equal(r.sw, r.cw);
+      await done(p);
+    }
   }
 });

@@ -122,9 +122,12 @@ test('hints: 2 per board, and following them clears the board', { skip }, async 
   assert.ok(await p.isDisabled('#hint'));
   await playPlan2(p);
   assert.equal((await state(p)).cols.length, 0, 'still clearable after following hints');
+  const score = await p.textContent('#score');
+  assert.match(await p.textContent('#again'), /Next board/);
   await p.click('#again');
   assert.equal(await p.textContent('#hints'), '2');
-  assert.equal(await p.textContent('#score'), '0');
+  assert.equal(await p.textContent('#score'), score, 'score carries on to the next board');
+  assert.equal(await p.textContent('#stage'), '2');
   await done(p);
 });
 // Continues the plan from wherever the board is now (after following hints, it is still on the plan).

@@ -4,6 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#2563eb">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="icon" href="../icons/icon.svg" type="image/svg+xml">
+<link rel="icon" href="../icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Color Games">
+<script src="../app.js" defer></script>
 <title>Color Breaker</title>
 <style>
   :root {
@@ -42,7 +50,7 @@
 
   /* portrait only: on a phone held sideways, ask for upright */
   #rotate { display: none; position: fixed; inset: 0; z-index: 10; background: var(--bg); color: var(--muted); align-items: center; justify-content: center; text-align: center; }
-  @media (orientation: landscape) and (pointer: coarse) { #rotate { display: flex; } .screen { display: none; } }
+  @media (orientation: landscape) and (pointer: coarse) and (max-height: 500px) { #rotate { display: flex; } .screen { display: none; } }
   .logo { display: block; margin: 0 auto 12px; }
   h1 { font-size: 26px; margin: 0 0 8px; }
   .tagline { color: var(--muted); margin: 0 0 28px; }
@@ -103,6 +111,31 @@
   .tray button:active { transform: scale(.9); }
   .actions { display: flex; gap: 10px; align-items: center; justify-content: center; flex-wrap: wrap; }
   #msg { min-height: 2.8em; margin-top: 8px; color: var(--muted); font-size: 14px; line-height: 1.4; }
+  /* Game over: an animated card over the game; tap anywhere to play again. */
+  .gameover { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: 16px;
+    background: rgba(10,12,18,.45); cursor: pointer; }
+  .go-card { width: min(100%, 320px); background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 20px;
+    padding: 22px 20px 16px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,.28); outline: none; }
+  .go-icon { display: block; margin: 0 auto; }
+  .go-card h2 { margin: 8px 0 6px; font-size: 26px; }
+  .go-reason { color: var(--muted); font-size: 15px; line-height: 1.4; margin: 0 0 16px; }
+  .go-stats { display: flex; justify-content: center; gap: 32px; margin-bottom: 14px; }
+  .go-stats b { display: block; font-size: 32px; line-height: 1.1; }
+  .go-stats span { font-size: 12px; color: var(--muted); }
+  .go-tap { color: var(--link); font-weight: 700; margin: 0; }
+  .go-menu { margin-top: 8px; background: none; border: 0; color: var(--muted); font-size: 13px; text-decoration: underline; padding: 6px; }
+  @media (prefers-reduced-motion: no-preference) {
+    .gameover.show { animation: goFade .3s ease-out both; }
+    .gameover.show .go-card { animation: goDrop .65s cubic-bezier(.2,1.35,.4,1) .05s both; }
+    .gameover.show .go-icon { animation: goWobble .9s ease-in-out .55s 2; }
+    .gameover.show .go-stats b { animation: goPop .4s cubic-bezier(.2,1.6,.4,1) .6s both; }
+    .gameover.show .go-tap { animation: goPulse 1.6s ease-in-out 1s infinite; }
+    @keyframes goFade { from { opacity: 0; } }
+    @keyframes goDrop { from { transform: translateY(-70vh) rotate(-8deg); opacity: 0; } 50% { opacity: 1; } }
+    @keyframes goWobble { 25% { transform: rotate(-12deg); } 75% { transform: rotate(12deg); } }
+    @keyframes goPop { from { transform: scale(0); } }
+    @keyframes goPulse { 50% { opacity: .4; } }
+  }
 </style>
 </head>
 <body>
@@ -135,6 +168,17 @@
   <a href="../index.html" id="allGames" style="margin-top:16px;color:var(--muted);font-size:14px;text-decoration:none">&larr; All games</a>
 </main>
 
+<div class="gameover hidden" id="gameover" role="dialog" aria-modal="true" aria-labelledby="goTitle">
+  <div class="go-card" tabindex="-1">
+    <svg class="go-icon" width="56" height="56" viewBox="0 0 56 56" aria-hidden="true"><circle cx="28" cy="28" r="26" fill="#f7dc1a"/><circle cx="20" cy="23" r="3.5" fill="#1b1b1f"/><circle cx="36" cy="23" r="3.5" fill="#1b1b1f"/><path d="M18 41c5-6 15-6 20 0" stroke="#1b1b1f" stroke-width="3.5" fill="none" stroke-linecap="round"/></svg>
+    <h2 id="goTitle">Game over</h2>
+    <p class="go-reason" id="goReason"></p>
+    <div class="go-stats"><div><b id="goStages">0</b><span id="goStagesLabel">stages completed</span></div><div><b id="goBest">0</b><span>best</span></div></div>
+    <p class="go-tap">Tap anywhere to play again</p>
+    <button class="go-menu" id="goMenu">Back to menu</button>
+  </div>
+</div>
+
 <div id="rotate" role="alert"><div><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg><p>Turn your phone upright to play.</p></div></div>
 
 <!-- Game screen -->
@@ -142,7 +186,7 @@
   <div class="top">
     <button class="iconbtn" id="menuBtn" aria-label="Back to menu">&larr; Menu</button>
     <h2 id="modeName">Easy</h2>
-    <div class="scorebox">Score <b id="score">0</b></div>
+    <div class="scorebox">Stage <b id="stage">1</b> &middot; Score <b id="score">0</b></div>
   </div>
   <div class="board"><div class="rows" id="rows"></div></div>
   <div class="tray" id="tray" role="group" aria-label="Colors"></div>
@@ -188,7 +232,32 @@ function makeSecret(m) {
 if (typeof document === "undefined") { module.exports = { score, makeSecret, MODES, COLORS }; }
 else {
   const $ = id => document.getElementById(id);
-  let modeKey, m, secret, guesses, current, sel, over, revealed, bulbs, total = 0;
+  // stage: which code you are on in this run; each cracked code is a stage completed.
+  let modeKey, m, secret, guesses, current, sel, over, won, revealed, bulbs, total = 0, stage = 1, overTimer = 0;
+  const stagesKey = key => "cb-stages-" + key;
+// Game over: shows how you lost and how many stages you completed. Tap anywhere (or press Enter) to play again.
+// The card ignores taps for a moment, so a tap meant for the game doesn't restart it by accident.
+function hideGameOver() {
+  const el = document.getElementById("gameover");
+  el.classList.add("hidden"); el.classList.remove("show"); el.onclick = null;
+  if (el._key) { document.removeEventListener("keydown", el._key); el._key = null; }
+}
+function showGameOver({ reason, stages, best, label = "stages completed", onRestart, onMenu }) {
+  const el = document.getElementById("gameover");
+  hideGameOver();
+  document.getElementById("goReason").textContent = reason;
+  document.getElementById("goStages").textContent = stages;
+  document.getElementById("goStagesLabel").textContent = label;
+  document.getElementById("goBest").textContent = best;
+  el.classList.remove("hidden"); void el.offsetWidth; el.classList.add("show");
+  const ready = Date.now() + 700;
+  const again = e => { if (Date.now() < ready) return; if (e) e.preventDefault(); hideGameOver(); onRestart(); };
+  el._key = e => { if (e.key === "Enter" || e.key === " ") again(e); };
+  el.onclick = e => { if (e.target.closest("#goMenu")) { hideGameOver(); onMenu(); } else again(e); };
+  document.addEventListener("keydown", el._key);
+  el.querySelector(".go-card").focus();
+}
+
 
   const store = {
     get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
@@ -218,15 +287,19 @@ else {
   function showMenu() {
     $("game").classList.add("hidden"); $("menu").classList.remove("hidden");
     showRows();
+    clearTimeout(overTimer); hideGameOver();
     const e = store.get("cb-best-easy"), h = store.get("cb-best-hard");
-    $("best").textContent = (e || h) ? `Best scores: Easy ${e || 0} · Hard ${h || 0}` : "";
+    const se = +store.get(stagesKey("easy")) || 0, sh = +store.get(stagesKey("hard")) || 0;
+    $("best").textContent = (e || h) ? `Best scores: Easy ${e || 0} · Hard ${h || 0}` + (se || sh ? ` · Most codes cracked: Easy ${se} · Hard ${sh}` : "") : "";
   }
 
-  function start(key) {
-    if (key !== modeKey) total = 0;
+  // fresh: start a new run (stage 1, score 0); otherwise go on to the next code.
+  function start(key, fresh = true) {
+    clearTimeout(overTimer); hideGameOver();
+    if (fresh || key !== modeKey) { total = 0; stage = 1; }
     modeKey = key; m = { ...MODES[key], tries: rowsFor(key) };
     secret = makeSecret(m); guesses = []; current = Array(m.pegs).fill(undefined); sel = 0;
-    over = false; revealed = new Set(); bulbs = m.bulbs;
+    over = false; won = false; revealed = new Set(); bulbs = m.bulbs;
     document.documentElement.style.setProperty("--n", m.pegs);
     document.documentElement.style.setProperty("--hc", Math.ceil(m.pegs / 2));
     document.documentElement.style.setProperty("--hw", m.pegs > 4 ? 1 : 0.75);
@@ -274,9 +347,10 @@ else {
       const p = +b.dataset.p; current[p] = undefined; sel = p; render();
     });
     $("score").textContent = total;
+    $("stage").textContent = stage;
     $("bulbs").textContent = bulbs;
     $("bulb").disabled = over || bulbs <= 0 || revealed.size >= m.pegs - 1;
-    $("check").textContent = over ? "Play again" : "Check";
+    $("check").textContent = over ? (won ? "Next code \u2192" : "Play again") : "Check";
     $("check").disabled = !over && filled() < m.pegs;
     fit();
   }
@@ -291,13 +365,14 @@ else {
   }
 
   function check() {
-    if (over) { start(modeKey); return; }
+    if (over) { if (won) { stage++; start(modeKey, false); } else start(modeKey); return; }
     if (filled() < m.pegs) return;
     const g = current.slice(); guesses.push(g);
     current = Array(m.pegs).fill(undefined); sel = 0;
     const r = score(secret, g);
     if (r.exact === m.pegs) {
-      over = true;
+      over = true; won = true;
+      if (stage > (+store.get(stagesKey(modeKey)) || 0)) store.set(stagesKey(modeKey), stage);
       const pts = (m.tries - guesses.length + 1) * 10 - (m.bulbs - bulbs) * 5;
       total += Math.max(pts, 5);
       const key = "cb-best-" + modeKey;
@@ -306,7 +381,13 @@ else {
       say(`You cracked it in ${guesses.length} ${guesses.length === 1 ? "try" : "tries"}! +${Math.max(pts, 5)} points`);
     } else if (guesses.length >= m.tries) {
       over = true; render();
-      say("Out of tries! The secret code is shown at the top. Try again!");
+      say("Out of tries! The secret code is shown at the top.");
+      const stages = stage - 1, best = Math.max(stages, +store.get(stagesKey(modeKey)) || 0);
+      store.set(stagesKey(modeKey), best);
+      const code = secret.map(c => COLORS[c].name).join(", ");
+      // Let the revealed code show for a moment, then the game-over card drops in.
+      overTimer = setTimeout(() => showGameOver({ reason: `Out of tries. The secret code was ${code}.`, stages, best, label: "codes cracked",
+        onRestart: () => start(modeKey), onMenu: showMenu }), 1400);
     } else {
       render();
       say(`${r.exact} black, ${r.partial} white. Keep going!`);

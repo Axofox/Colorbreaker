@@ -115,7 +115,8 @@ test('winning: message, points and best score', { skip }, async () => {
   await guess(p, [0, 1, 2, 3]);
   assert.match(await text(p, '#msg'), /cracked it in 1 try! \+80 points/);
   assert.equal(await text(p, '#score'), '80');
-  assert.equal(await text(p, '#check'), 'Play again');
+  assert.equal(await text(p, '#check'), 'Next code →');
+  assert.equal(await text(p, '#stage'), '1');
   assert.equal(await count(p, '.secretrow .marble'), 4, 'secret code is revealed');
   assert.equal(await count(p, '.row.active'), 0, 'no row is active after the game');
   assert.equal(await count(p, 'button.hole'), 0, 'holes can no longer be changed');
@@ -353,5 +354,27 @@ test('keyboard: color buttons and holes are reachable and have names', { skip },
   await p.focus('#tray button[data-c="2"]');
   await p.keyboard.press('Enter');
   assert.equal(await count(p, '.row.active .marble'), 1);
+  await done(p);
+});
+
+test('a cracked code is a stage: Next code keeps the score; out of tries shows the game-over card', { skip }, async () => {
+  const p = await open();
+  await p.click('[data-mode=easy]');
+  await guess(p, [0, 1, 2, 3]);
+  await p.click('#check');                                   // Next code
+  assert.equal(await text(p, '#stage'), '2');
+  assert.equal(await text(p, '#score'), '80', 'score carries on');
+  for (let i = 0; i < 8; i++) await guess(p, [5, 5, 5, 5]);  // never right
+  await p.waitForSelector('#gameover.show');
+  assert.match(await text(p, '#goReason'), /Out of tries\. The secret code was white, pink, yellow, green\./);
+  assert.equal(await text(p, '#goStages'), '1');
+  assert.equal(await text(p, '#goStagesLabel'), 'codes cracked');
+  await p.waitForTimeout(800);
+  await p.click('#gameover');                                // tap anywhere to play again
+  assert.ok(!(await p.isVisible('#gameover')));
+  assert.equal(await text(p, '#stage'), '1');
+  assert.equal(await text(p, '#score'), '0');
+  await p.click('#menuBtn');
+  assert.match(await text(p, '#best'), /Most codes cracked: Easy 1/);
   await done(p);
 });
