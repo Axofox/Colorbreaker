@@ -4,6 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#2563eb">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="icon" href="../icons/icon.svg" type="image/svg+xml">
+<link rel="icon" href="../icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Color Games">
+<script src="../app.js" defer></script>
 <title>Color Breaker</title>
 <style>
   :root {
@@ -42,7 +50,7 @@
 
   /* portrait only: on a phone held sideways, ask for upright */
   #rotate { display: none; position: fixed; inset: 0; z-index: 10; background: var(--bg); color: var(--muted); align-items: center; justify-content: center; text-align: center; }
-  @media (orientation: landscape) and (pointer: coarse) { #rotate { display: flex; } .screen { display: none; } }
+  @media (orientation: landscape) and (pointer: coarse) and (max-height: 500px) { #rotate { display: flex; } .screen { display: none; } }
   .logo { display: block; margin: 0 auto 12px; }
   h1 { font-size: 26px; margin: 0 0 8px; }
   .tagline { color: var(--muted); margin: 0 0 28px; }

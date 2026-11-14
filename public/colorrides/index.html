@@ -4,6 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#2563eb">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="icon" href="../icons/icon.svg" type="image/svg+xml">
+<link rel="icon" href="../icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Color Games">
+<script src="../app.js" defer></script>
 <title>Color Rides</title>
 <style>
   :root {
@@ -132,7 +140,7 @@
   #msg { min-height: 2.8em; margin-top: 8px; color: var(--muted); font-size: 14px; line-height: 1.4; flex: none; }
 
   #rotate { display: none; position: fixed; inset: 0; z-index: 60; background: var(--bg); color: var(--muted); align-items: center; justify-content: center; text-align: center; }
-  @media (orientation: landscape) and (pointer: coarse) { #rotate { display: flex; } .screen { display: none; } }
+  @media (orientation: landscape) and (pointer: coarse) and (max-height: 500px) { #rotate { display: flex; } .screen { display: none; } }
   /* Game over: an animated card over the game; tap anywhere to play again. */
   .gameover { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: 16px;
     background: rgba(10,12,18,.45); cursor: pointer; }
