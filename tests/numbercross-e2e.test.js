@@ -40,7 +40,7 @@ async function startWithWrongTile(p, level) {
 test('games menu links to both games', { skip }, async () => {
   const p = await open(['index.html']);
   const links = await p.$$eval('a.game', as => as.map(a => a.getAttribute('href')));
-  assert.deepEqual(links, ['colorbreaker/index.html', 'numbercross/index.html', 'blockfit/index.html']);
+  assert.deepEqual(links, ['colorbreaker/index.html', 'numbercross/index.html', 'blockfit/index.html', 'colorrides/index.html']);
   await p.click('a.game >> nth=1');
   assert.equal(await p.title(), 'Number Cross');
   await p.click('a.back');

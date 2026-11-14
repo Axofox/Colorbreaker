@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2563eb">
+<title>Color Rides</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #ffffff; --fg: #1b1b1f; --muted: #6b7280; --border: #e5e7eb; --panel: #f9fafb; --link: #2563eb; --hole: #eef0f3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #14151a; --fg: #e7e7ea; --muted: #9aa0aa; --border: #2a2b32; --panel: #1b1c22; --link: #7db4ff; --hole: #23242b; }
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow: hidden; overscroll-behavior: none; touch-action: manipulation; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; user-select: none; -webkit-user-select: none;
+  }
+  button { font: inherit; cursor: pointer; color: inherit; }
+  .hidden { display: none !important; }
+  :focus-visible { outline: 3px solid var(--link); outline-offset: 2px; }
+  .screen {
+    width: 100%; max-width: 440px; height: 100vh; height: 100dvh; margin: 0 auto; text-align: center;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); overflow: hidden; display: flex; flex-direction: column;
+  }
+  #menu { justify-content: center; align-items: center; }
+  .logo { display: block; margin: 0 auto 12px; }
+  h1 { font-size: 26px; margin: 0 0 8px; }
+  .tagline { color: var(--muted); margin: 0 0 24px; }
+  .menu-btns { display: flex; flex-direction: column; gap: 12px; align-items: center; margin-bottom: 20px; }
+  .menu-label { color: var(--muted); font-size: 13px; font-weight: 600; margin: 4px 0 -4px; }
+  .card { border: 1px solid var(--border); background: var(--panel); border-radius: 12px; padding: 20px; text-align: left; }
+  .card p { margin: 0; font-size: 14px; line-height: 1.6; }
+  .card p + p { margin-top: 10px; }
+  .back { margin-top: 16px; color: var(--muted); font-size: 14px; text-decoration: none; }
+  .pill {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: 999px;
+    padding: 12px 28px; background: var(--link); color: #fff; font-weight: 600; font-size: 15px;
+  }
+  .pill:hover { opacity: .9; }
+  .menu-btns > .pill { min-width: 220px; }
+  .row-btns { display: flex; gap: 8px; }
+  .row-btns .pill { padding: 12px 16px; flex-direction: column; gap: 0; line-height: 1.25; }
+  .row-btns .pill small { font-weight: 500; font-size: 12px; opacity: .85; }
+
+  .top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .top h2 { margin: 0; font-size: 18px; }
+  .iconbtn { border: 1px solid var(--border); background: var(--panel); border-radius: 999px; padding: 6px 14px; font-size: 13px; font-weight: 600; color: var(--muted); }
+  .scorebox { font-size: 13px; color: var(--muted); min-width: 70px; text-align: right; }
+  .scorebox b { color: var(--fg); font-size: 16px; }
+  .status { display: flex; justify-content: center; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 14px; color: var(--muted); }
+  .status b { color: var(--fg); font-size: 16px; }
+
+  /* the queue of people: first in line on the left */
+  #queue { display: flex; gap: 4px; overflow: hidden; height: 30px; align-items: center; margin-bottom: 8px; padding: 0 2px; }
+  .p { flex: none; width: 26px; height: 26px; border-radius: 50%; border: 1px solid rgba(0,0,0,.14); display: grid; place-items: center;
+    font-size: 12px; font-weight: 800; line-height: 1; }
+  .p.num { background: var(--bg); border: 2px solid var(--muted); color: var(--fg); }
+  .p.first { outline: 2px solid var(--link); outline-offset: 2px; }
+
+  /* parking spots */
+  #slots { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 10px; }
+  .slot { height: 56px; border-radius: 10px; border: 2px dashed var(--border); display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 4px; color: var(--muted); font-weight: 700; font-size: 18px; }
+  .slot.on { border: 1px solid rgba(0,0,0,.14); color: #fff; font-size: 13px; }
+  .slot.on.dark { color: #1b1b1f; }
+  .seats { display: flex; gap: 3px; }
+  .seats i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; opacity: .3; }
+  .seats i.f { opacity: 1; }
+
+  .board { flex: 1 1 0; min-height: 0; overflow: hidden; display: flex; align-items: center; justify-content: center;
+    border: 1px solid var(--border); background: var(--panel); border-radius: 12px; padding: 8px; }
+  #lot { position: relative; overflow: hidden; border-radius: 8px; }
+  .spot { position: absolute; border-radius: 8px; background: var(--hole); border: 1px solid var(--border); }
+  .car { position: absolute; padding: 0; border-radius: 10px; border: 1px solid rgba(0,0,0,.14); color: #fff; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; font-weight: 800; line-height: 1.05; transition: transform .3s ease-in; }
+  .car.dark { color: #1b1b1f; }
+  .car svg { position: absolute; width: 16px; height: 16px; }
+  .car.big svg { width: 26px; height: 26px; }
+  .car .lab { position: relative; white-space: nowrap; }
+  .car.shake { animation: shake .3s; }
+  .shake-row { animation: shake2 .3s; }
+  @keyframes shake { 30% { transform: translate(var(--sx), var(--sy)); } 60% { transform: translate(0, 0); } 80% { transform: translate(calc(var(--sx) / 3), calc(var(--sy) / 3)); } }
+  @keyframes shake2 { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+  @media (prefers-reduced-motion: reduce) { .car { transition: none; } .car.shake, .shake-row { animation: none; } }
+
+  .actions { display: flex; gap: 10px; justify-content: center; margin-top: 10px; }
+  #msg { min-height: 2.8em; margin-top: 8px; color: var(--muted); font-size: 14px; line-height: 1.4; }
+
+  #rotate { display: none; position: fixed; inset: 0; z-index: 10; background: var(--bg); color: var(--muted); align-items: center; justify-content: center; text-align: center; }
+  @media (orientation: landscape) and (pointer: coarse) { #rotate { display: flex; } .screen { display: none; } }
+</style>
+</head>
+<body>
+
+<main class="screen" id="menu">
+  <svg class="logo" width="56" height="56" viewBox="0 0 32 32" aria-hidden="true">
+    <rect width="32" height="32" rx="8" fill="#1f2937"/>
+    <rect x="4" y="5" width="15" height="7" rx="2.5" fill="#e23a2e"/><path d="M8 8.5h6.5m-2-2 2 2-2 2" stroke="#fff" stroke-width="1.3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="21" y="5" width="7" height="15" rx="2.5" fill="#f7dc1a"/><path d="M24.5 16V9.5m-2 2 2-2 2 2" stroke="#1b1b1f" stroke-width="1.3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="4" y="14" width="15" height="7" rx="2.5" fill="#2f6fe8"/><path d="M15 17.5H8.5m2-2-2 2 2 2" stroke="#fff" stroke-width="1.3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="7" cy="26" r="2.4" fill="#e23a2e"/><circle cx="12.5" cy="26" r="2.4" fill="#2f6fe8"/><circle cx="18" cy="26" r="2.4" fill="#f7dc1a"/><circle cx="23.5" cy="26" r="2.4" fill="#3bc14f"/>
+  </svg>
+  <h1>Color Rides</h1>
+  <p class="tagline">Drive the cars out and give everyone a ride.</p>
+  <div class="menu-btns">
+    <button class="pill" data-mode="colors">Colors &rarr;</button>
+    <div class="menu-label">With math</div>
+    <div class="row-btns">
+      <button class="pill" data-mode="easy">Easy</button>
+      <button class="pill" data-mode="medium">Medium</button>
+      <button class="pill" data-mode="hard">Hard</button>
+    </div>
+  </div>
+  <div class="card">
+    <p>Tap a car to drive it out the way its arrow points. It can only go if nothing is in the way. Then it waits in a parking spot.</p>
+    <p><strong>Colors</strong>: people get on a car of their color. <strong>With math</strong>: each car has a sum, and people get on the car whose answer is their number.</p>
+    <p>A full car drives away. If all 5 spots are full and nobody can get on, try again.</p>
+  </div>
+  <a class="back" href="../index.html">&larr; All games</a>
+</main>
+
+<main class="screen hidden" id="game">
+  <div class="top">
+    <button class="iconbtn" id="menuBtn" aria-label="Back to menu">&larr; Menu</button>
+    <h2 id="modeName">Colors</h2>
+    <div class="scorebox">Level <b id="level">1</b></div>
+  </div>
+  <div class="status">Waiting <b id="waiting">0</b></div>
+  <div id="queue" aria-label="People waiting, first in line on the left"></div>
+  <div id="slots" role="group" aria-label="Parking spots"></div>
+  <div class="board"><div id="lot" role="group" aria-label="Car park"></div></div>
+  <div class="actions hidden" id="actions"><button class="pill" id="nextBtn">Next level &rarr;</button></div>
+  <div id="msg" role="status"></div>
+</main>
+
+<div id="rotate" role="alert"><div><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg><p>Turn your phone upright to play.</p></div></div>
+
+<script>
+// ---------- Rules (pure, no DOM; exported for tests) ----------
+const COLORS = ["#e754d0", "#f7dc1a", "#3bc14f", "#e23a2e", "#2f6fe8"]; // same as Color Breaker's marbles
+const DARK_TEXT = 1;          // yellow needs dark text and arrows
+const SLOTS = 5;
+const SEATS = { 2: 4, 3: 6 }; // a car (2 long) has 4 seats, a bus (3 long) has 6
+
+// Math rules: the same as Number Cross.
+const LEVELS = {
+  easy:   { label: "Easy",   max: 10, ops: ["+", "-"] },
+  medium: { label: "Medium", max: 20, ops: ["+", "-"] },
+  hard:   { label: "Hard",   max: 30, ops: ["+", "-", "×", "÷"] },
+};
+// Sums a 5-year-old can do: two small numbers (7 + 7), or bigger ones with no carrying (12 + 5, not 14 + 16).
+const easyAdd = (a, b) => (a < 10 && b < 10) || (a % 10) + (b % 10) < 10;
+// Take-aways with no borrowing (17 - 5, not 14 - 7), or anything starting from 10 or less.
+const easySub = (a, b) => a <= 10 || (a % 10) >= (b % 10);
+// Every allowed equation for a level, as [a, op, b, c] meaning a op b = c. All numbers are whole and at least 1.
+function equationsFor(key) {
+  const L = LEVELS[key], out = [];
+  for (let a = 1; a <= L.max; a++) for (let b = 1; b <= L.max; b++) {
+    if (L.ops.includes("+") && a + b <= L.max && easyAdd(a, b)) out.push([a, "+", b, a + b]);
+    if (L.ops.includes("-") && a - b >= 1 && easySub(a, b)) out.push([a, "-", b, a - b]);
+    // Times and divide stay tiny: only doubles and halves, nothing above 20.
+    if (L.ops.includes("×") && (a === 2 || b === 2) && a <= 10 && b <= 10 && a * b <= 20) out.push([a, "×", b, a * b]);
+    if (L.ops.includes("÷") && b === 2 && a <= 20 && a % 2 === 0) out.push([a, "÷", b, a / b]);
+  }
+  return out;
+}
+
+const MODES = {
+  colors: { label: "Colors" },
+  easy:   { label: "Math: Easy",   math: "easy" },
+  medium: { label: "Math: Medium", math: "medium" },
+  hard:   { label: "Math: Hard",   math: "hard" },
+};
+
+// Bigger car parks and more cars as the levels go up. Math car parks stay a little smaller so the sums are easy to read.
+function levelConfig(mode, level) {
+  const math = !!MODES[mode].math;
+  const size = math ? (level <= 3 ? 6 : 7) : (level <= 2 ? 6 : level <= 5 ? 7 : 8);
+  const cap = math ? { 6: 9, 7: 12 }[size] : { 6: 10, 7: 14, 8: 18 }[size];
+  return { size, cars: Math.min(5 + level * 2, cap), colors: Math.min(COLORS.length, 2 + level), group: level <= 2 ? 2 : 3 };
+}
+
+const horizontal = car => car.dir === "L" || car.dir === "R";
+function cellsOf(car) {
+  const out = [];
+  for (let i = 0; i < car.len; i++) out.push(horizontal(car) ? [car.x + i, car.y] : [car.x, car.y + i]);
+  return out;
+}
+// The squares a car drives over on its way out of the car park.
+function pathOf(car, w, h) {
+  const out = [];
+  if (car.dir === "R") for (let x = car.x + car.len; x < w; x++) out.push([x, car.y]);
+  if (car.dir === "L") for (let x = car.x - 1; x >= 0; x--) out.push([x, car.y]);
+  if (car.dir === "D") for (let y = car.y + car.len; y < h; y++) out.push([car.x, y]);
+  if (car.dir === "U") for (let y = car.y - 1; y >= 0; y--) out.push([car.x, y]);
+  return out;
+}
+function occupancy(cars, w, h) {
+  const g = Array.from({ length: h }, () => Array(w).fill(-1));
+  for (const c of cars) if (!c.gone) for (const [x, y] of cellsOf(c)) g[y][x] = c.id;
+  return g;
+}
+function shuffle(a, rand) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+
+// Builds a level that can always be solved. Cars are placed one at a time, and each new car must have a clear way out
+// past every car already placed. So driving them out in the reverse order always works.
+function generate(mode, level, rand = Math.random) {
+  const cfg = levelConfig(mode, level), w = cfg.size, h = cfg.size;
+  let placed = [];
+  for (let attempt = 0; attempt < 20 && placed.length < Math.min(cfg.cars, 4); attempt++) {
+    placed = [];
+    const occ = Array.from({ length: h }, () => Array(w).fill(false));
+    for (let tries = 0; tries < 4000 && placed.length < cfg.cars; tries++) {
+      const len = rand() < 0.3 ? 3 : 2, dir = "UDLR"[Math.floor(rand() * 4)];
+      const hor = dir === "L" || dir === "R";
+      const car = { len, dir, x: Math.floor(rand() * (hor ? w - len + 1 : w)), y: Math.floor(rand() * (hor ? h : h - len + 1)) };
+      if (cellsOf(car).some(([x, y]) => occ[y][x])) continue;
+      if (pathOf(car, w, h).some(([x, y]) => occ[y][x])) continue;
+      placed.push(car);
+      for (const [x, y] of cellsOf(car)) occ[y][x] = true;
+    }
+  }
+  // Give each car its color (and sum, in math mode).
+  const math = MODES[mode].math, eqs = math ? shuffle(equationsFor(math), rand) : null, used = new Set();
+  const cars = placed.map((c, id) => {
+    const car = { ...c, id, seats: SEATS[c.len], color: Math.floor(rand() * cfg.colors), gone: false };
+    if (math) {
+      const e = eqs.find(q => !used.has(q[3])) || eqs[Math.floor(rand() * eqs.length)];
+      used.add(e[3]);
+      car.color = Math.floor(rand() * COLORS.length);
+      car.eq = e.slice(0, 3); car.key = e[3];
+    } else car.key = car.color;
+    return car;
+  });
+  // One order that always works: the last car placed drives out first.
+  const order = cars.map(c => c.id).reverse();
+  // The queue follows that order, mixed up within small groups of cars, so a few cars may need to wait in spots at once.
+  const queue = [];
+  for (let i = 0; i < order.length; i += cfg.group) {
+    const chunk = [];
+    for (const id of order.slice(i, i + cfg.group)) for (let s = 0; s < cars[id].seats; s++) chunk.push(cars[id].key);
+    queue.push(...shuffle(chunk, rand));
+  }
+  return { mode, level, w, h, cars, order, queue, slots: Array(SLOTS).fill(null), parked: 0 };
+}
+
+// The id of the first car in the way, or -1 if the way out is clear.
+function blockerOf(s, id) {
+  const occ = occupancy(s.cars, s.w, s.h);
+  for (const [x, y] of pathOf(s.cars[id], s.w, s.h)) if (occ[y][x] >= 0) return occ[y][x];
+  return -1;
+}
+// Tap a car: it drives out to the first free spot if its way is clear.
+function tap(s, id) {
+  const car = s.cars[id];
+  if (!car || car.gone) return { ok: false, reason: "gone" };
+  const by = blockerOf(s, id);
+  if (by >= 0) return { ok: false, reason: "blocked", by };
+  const slot = s.slots.indexOf(null);
+  if (slot < 0) return { ok: false, reason: "full" };
+  car.gone = true;
+  s.slots[slot] = { id, key: car.key, color: car.color, eq: car.eq, seats: car.seats, filled: 0, at: s.parked++ };
+  return { ok: true, slot };
+}
+// The spot the first person in line would get into: the earliest-parked matching car with a free seat.
+function boardingSlot(s) {
+  if (!s.queue.length) return -1;
+  let best = -1;
+  s.slots.forEach((sl, i) => { if (sl && sl.key === s.queue[0] && sl.filled < sl.seats && (best < 0 || sl.at < s.slots[best].at)) best = i; });
+  return best;
+}
+// One person gets on, if they can. A full car drives away and frees its spot.
+function boardOne(s) {
+  const i = boardingSlot(s);
+  if (i < 0) return null;
+  const key = s.queue.shift(), sl = s.slots[i];
+  sl.filled++;
+  const left = sl.filled === sl.seats;
+  if (left) s.slots[i] = null;
+  return { slot: i, key, left };
+}
+function boardAll(s) { let n = 0; while (boardOne(s)) n++; return n; }
+function status(s) {
+  if (!s.queue.length) return "won";
+  if (s.slots.every(Boolean) && boardingSlot(s) < 0) return "lost";
+  return "playing";
+}
+
+if (typeof document === "undefined") {
+  module.exports = { COLORS, SLOTS, SEATS, LEVELS, MODES, easyAdd, easySub, equationsFor, levelConfig, cellsOf, pathOf, occupancy, generate, blockerOf, tap, boardingSlot, boardOne, boardAll, status };
+} else {
+// ---------- Page ----------
+const $ = id => document.getElementById(id);
+const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+const levelKey = mode => "colorrides-level-" + mode;
+const savedLevel = mode => Math.max(1, +store.get(levelKey(mode)) || 1);
+let g = null, busy = false, cell = 40, carEls = {};
+window.__colorrides = () => g;
+
+function showMenuLevels() {
+  document.querySelectorAll("[data-mode]").forEach(b => {
+    const n = savedLevel(b.dataset.mode), name = b.dataset.mode === "colors" ? "Colors" : LEVELS[b.dataset.mode].label;
+    if (b.dataset.mode === "colors") b.innerHTML = name + (n > 1 ? " &middot; Level " + n : "") + " &rarr;";
+    else b.innerHTML = name + (n > 1 ? "<small>Level " + n + "</small>" : "");
+  });
+}
+showMenuLevels();
+
+const arrowSVG = dir => {
+  const rot = { R: 0, D: 90, L: 180, U: 270 }[dir];
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="transform:rotate(${rot}deg)" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg>`;
+};
+const eqText = eq => `${eq[0]} ${eq[1]} ${eq[2]} =`;
+const isDark = color => color === DARK_TEXT;
+
+function say(t) { $("msg").textContent = t; }
+
+function layout() {
+  // The car park is square: as big as the panel allows.
+  const box = $("lot").parentElement, size = Math.floor(Math.min(box.clientWidth - 18, box.clientHeight - 18) / g.w) * g.w;
+  cell = size / g.w;
+  const lot = $("lot");
+  lot.style.width = lot.style.height = size + "px";
+  lot.querySelectorAll(".spot").forEach(sp => {
+    const x = +sp.dataset.x, y = +sp.dataset.y;
+    Object.assign(sp.style, { left: x * cell + 2 + "px", top: y * cell + 2 + "px", width: cell - 4 + "px", height: cell - 4 + "px" });
+  });
+  for (const car of g.cars) {
+    const el = carEls[car.id]; if (!el) continue;
+    const hor = car.dir === "L" || car.dir === "R";
+    Object.assign(el.style, { left: car.x * cell + 2 + "px", top: car.y * cell + 2 + "px",
+      width: (hor ? car.len : 1) * cell - 4 + "px", height: (hor ? 1 : car.len) * cell - 4 + "px",
+      fontSize: Math.max(10, Math.min(15, cell * .3)) + "px" });
+    const svg = el.querySelector("svg");
+    if (car.eq) { // math: small arrow at the front, sum in the middle
+      const pos = { R: { right: "3px", top: "calc(50% - 8px)" }, L: { left: "3px", top: "calc(50% - 8px)" }, D: { bottom: "3px", left: "calc(50% - 8px)" }, U: { top: "3px", left: "calc(50% - 8px)" } }[car.dir];
+      Object.assign(svg.style, pos);
+      el.style.padding = { R: "0 18px 0 4px", L: "0 4px 0 18px", D: "0 0 16px", U: "16px 0 0" }[car.dir];
+    }
+  }
+}
+window.addEventListener("resize", () => g && layout());
+
+function buildLot() {
+  const lot = $("lot");
+  lot.innerHTML = ""; carEls = {};
+  for (let y = 0; y < g.h; y++) for (let x = 0; x < g.w; x++) {
+    const sp = document.createElement("div"); sp.className = "spot"; sp.dataset.x = x; sp.dataset.y = y; lot.appendChild(sp);
+  }
+  for (const car of g.cars) {
+    const el = document.createElement("button");
+    el.className = "car" + (isDark(car.color) ? " dark" : "") + (car.eq ? "" : " big");
+    el.dataset.id = car.id;
+    el.style.background = COLORS[car.color];
+    const hor = car.dir === "L" || car.dir === "R";
+    let label = "";
+    if (car.eq) label = hor ? `<span class="lab">${eqText(car.eq)}</span>` : `<span class="lab">${car.eq[0]}</span><span class="lab">${car.eq[1]} ${car.eq[2]}</span><span class="lab">=</span>`;
+    el.innerHTML = arrowSVG(car.dir) + label;
+    const dirWord = { U: "up", D: "down", L: "left", R: "right" }[car.dir];
+    el.setAttribute("aria-label", (car.eq ? car.eq.join(" ") + " equals what, " : "") + (car.len === 3 ? "bus" : "car") + ", drives " + dirWord);
+    el.addEventListener("click", () => onTap(car.id));
+    lot.appendChild(el); carEls[car.id] = el;
+  }
+  layout();
+}
+
+function renderQueue() {
+  $("waiting").textContent = g.queue.length;
+  const math = !!MODES[g.mode].math;
+  $("queue").innerHTML = g.queue.slice(0, 16).map((k, i) => math
+    ? `<span class="p num${i ? "" : " first"}">${k}</span>`
+    : `<span class="p${i ? "" : " first"}" style="background:${COLORS[k]}"></span>`).join("");
+}
+function renderSlots() {
+  $("slots").innerHTML = g.slots.map(sl => {
+    if (!sl) return `<div class="slot" aria-label="Empty spot">P</div>`;
+    const seats = Array.from({ length: sl.seats }, (_, i) => `<i class="${i < sl.filled ? "f" : ""}"></i>`).join("");
+    return `<div class="slot on${isDark(sl.color) ? " dark" : ""}" style="background:${COLORS[sl.color]}" aria-label="${sl.filled} of ${sl.seats} seats taken">${sl.eq ? `<span>${eqText(sl.eq)}</span>` : ""}<span class="seats">${seats}</span></div>`;
+  }).join("");
+}
+
+function start(mode, level) {
+  g = generate(mode, level || savedLevel(mode)); busy = false;
+  $("menu").classList.add("hidden"); $("game").classList.remove("hidden"); $("actions").classList.add("hidden");
+  $("modeName").textContent = MODES[mode].label; $("level").textContent = g.level;
+  say(MODES[mode].math ? "Tap a car to drive it out. People get on the car whose answer is their number." : "Tap a car to drive it out. People get on a car of their color.");
+  renderQueue(); renderSlots(); buildLot();
+}
+function toMenu() { g = null; showMenuLevels(); $("game").classList.add("hidden"); $("menu").classList.remove("hidden"); }
+document.querySelectorAll("[data-mode]").forEach(b => b.onclick = () => start(b.dataset.mode));
+$("menuBtn").onclick = toMenu;
+$("nextBtn").onclick = () => { const s = status(g); start(g.mode, s === "won" ? g.level + 1 : g.level); };
+
+function shakeCar(id) {
+  const el = carEls[id], car = g.cars[id], d = { U: [0, -1], D: [0, 1], L: [-1, 0], R: [1, 0] }[car.dir];
+  el.style.setProperty("--sx", d[0] * 8 + "px"); el.style.setProperty("--sy", d[1] * 8 + "px");
+  el.classList.remove("shake"); void el.offsetWidth; el.classList.add("shake");
+}
+function onTap(id) {
+  if (busy || !g || status(g) !== "playing") return;
+  const res = tap(g, id);
+  if (!res.ok) {
+    if (res.reason === "blocked") { shakeCar(id); say("That car is blocked. Move the car in its way first."); }
+    if (res.reason === "full") { const s = $("slots"); s.classList.remove("shake-row"); void s.offsetWidth; s.classList.add("shake-row"); say("All parking spots are full! Wait for people to get on."); }
+    return;
+  }
+  busy = true; say("");
+  const el = carEls[id], car = g.cars[id], dist = (g.w + car.len) * cell, d = { U: [0, -1], D: [0, 1], L: [-1, 0], R: [1, 0] }[car.dir];
+  el.disabled = true;
+  el.style.transform = `translate(${d[0] * dist}px, ${d[1] * dist}px)`;
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  setTimeout(() => { el.remove(); delete carEls[id]; renderSlots(); setTimeout(step, reduce ? 0 : 150); }, reduce ? 0 : 300);
+  function step() {
+    const ev = boardOne(g);
+    if (ev) { renderQueue(); renderSlots(); setTimeout(step, reduce ? 0 : 90); return; }
+    busy = false;
+    const s = status(g);
+    if (s === "won") {
+      store.set(levelKey(g.mode), Math.max(savedLevel(g.mode), g.level + 1));
+      say("Everyone got a ride! Level " + g.level + " done.");
+      $("nextBtn").innerHTML = "Next level &rarr;"; $("actions").classList.remove("hidden"); layout();
+    } else if (s === "lost") {
+      say("All the spots are full and nobody can get on. Try again!");
+      $("nextBtn").textContent = "Try again"; $("actions").classList.remove("hidden"); layout();
+    }
+  }
+}
+}
+</script>
+</body>
+</html>
