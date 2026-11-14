@@ -122,3 +122,48 @@ test('levels get bigger, and math car parks stay at most 7 wide', () => {
   assert.ok(G.levelConfig('colors', 8).size > G.levelConfig('colors', 1).size);
   for (let l = 1; l < 30; l++) for (const m of ['easy', 'medium', 'hard']) assert.ok(G.levelConfig(m, l).size <= 7);
 });
+
+// A sensible player: serve the person at the front; if their car is blocked, move the cars in its way first.
+function sensible(s) {
+  while (G.status(s) === 'playing') {
+    const gone = new Set(s.cars.filter(c => c.gone).map(c => c.id));
+    const want = s.cars.filter(c => !c.gone && c.key === s.queue[0])
+      .map(c => ({ c, chain: G.chainFor(s.cars, s.w, s.h, gone, c.id) })).sort((a, b) => a.chain.length - b.chain.length)[0];
+    if (!want) return false;
+    if (!G.tap(s, want.chain.length ? want.chain[0] : want.c.id).ok) return false;
+    G.boardAll(s);
+  }
+  return G.status(s) === 'won';
+}
+// Tapping any car that can move, without a plan.
+function careless(s) {
+  while (G.status(s) === 'playing') {
+    const free = s.cars.filter(c => !c.gone && G.blockerOf(s, c.id) < 0);
+    if (!free.length || !G.tap(s, free[Math.floor(Math.random() * free.length)].id).ok) break;
+    G.boardAll(s);
+  }
+  return G.status(s) === 'won';
+}
+const rate = (fn, mode, level, n = 150) => { let w = 0; for (let i = 0; i < n; i++) if (fn(G.generate(mode, level))) w++; return w / n; };
+
+test('spots: 5 on the first level(s), then 4; math keeps 5 a little longer', () => {
+  assert.equal(G.generate('colors', 1).slots.length, 5);
+  assert.equal(G.generate('colors', 2).slots.length, 4);
+  assert.equal(G.generate('easy', 3).slots.length, 5);
+  assert.equal(G.generate('easy', 4).slots.length, 4);
+});
+test('challenge: careless tapping usually loses after level 1', () => {
+  assert.ok(rate(careless, 'colors', 3) < 0.35, 'colors level 3');
+  assert.ok(rate(careless, 'colors', 6) < 0.15, 'colors level 6');
+  assert.ok(rate(careless, 'easy', 3) < 0.2, 'math level 3');
+});
+test('challenge: levels often need blocking cars moved first', () => {
+  let moved = 0; for (let i = 0; i < 100; i++) moved += G.generate('colors', 4).moved;
+  assert.ok(moved / 100 >= 2, `average cars to move: ${moved / 100}`);
+});
+test('fair: a sensible player wins most levels, and every level has a known winning plan', () => {
+  assert.ok(rate(sensible, 'colors', 2) > 0.85);
+  assert.ok(rate(sensible, 'colors', 6) > 0.65);
+  assert.ok(rate(sensible, 'easy', 4) > 0.8);
+  for (let i = 0; i < 100; i++) { const s = G.generate('colors', 1 + (i % 10)); assert.ok(G.wins(s.cars, s.w, s.h, s.slots.length, { taps: s.order, queue: s.queue })); }
+});
