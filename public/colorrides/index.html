@@ -66,8 +66,9 @@
   #slots { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 10px; }
   .slot { height: 56px; border-radius: 10px; border: 2px dashed var(--border); display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: 4px; color: var(--muted); font-weight: 700; font-size: 18px; }
-  .slot.on { border: 1px solid rgba(0,0,0,.14); color: #fff; font-size: 13px; }
-  .slot.on.dark { color: #1b1b1f; }
+  .slot.on { border: 1px solid var(--border); background: var(--bg); color: var(--fg); font-size: 12px; gap: 3px; }
+  .mini { position: relative; width: 94%; height: 28px; display: grid; place-items: center; }
+  .mini svg { position: absolute; inset: 0; width: 100%; height: 100%; }
   .seats { display: flex; gap: 3px; }
   .seats i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; opacity: .3; }
   .seats i.f { opacity: 1; }
@@ -76,12 +77,13 @@
     border: 1px solid var(--border); background: var(--panel); border-radius: 12px; padding: 8px; }
   #lot { position: relative; overflow: hidden; border-radius: 8px; }
   .spot { position: absolute; border-radius: 8px; background: var(--hole); border: 1px solid var(--border); }
-  .car { position: absolute; padding: 0; border-radius: 10px; border: 1px solid rgba(0,0,0,.14); color: #fff; display: flex; flex-direction: column;
+  .car { position: absolute; padding: 0; border: 0; background: none; color: #fff; display: flex; flex-direction: column;
     align-items: center; justify-content: center; font-weight: 800; line-height: 1.05; transition: transform .3s ease-in; }
-  .car.dark { color: #1b1b1f; }
-  .car svg { position: absolute; width: 16px; height: 16px; }
-  .car.big svg { width: 26px; height: 26px; }
-  .car .lab { position: relative; white-space: nowrap; }
+  .car svg.body { position: absolute; transform-origin: center; overflow: visible; }
+  /* the sum sits on a dark sign on the roof, so it reads on every car color */
+  .lab { position: relative; white-space: nowrap; background: rgba(15,20,30,.55); color: #fff; border-radius: 6px; padding: 2px 4px;
+    display: flex; flex-direction: column; align-items: center; }
+  .slot .lab { font-size: 11px; padding: 1px 4px; }
   .car.shake { animation: shake .3s; }
   .shake-row { animation: shake2 .3s; }
   @keyframes shake { 30% { transform: translate(var(--sx), var(--sy)); } 60% { transform: translate(0, 0); } 80% { transform: translate(calc(var(--sx) / 3), calc(var(--sy) / 3)); } }
@@ -311,10 +313,37 @@ function showMenuLevels() {
 }
 showMenuLevels();
 
-const arrowSVG = dir => {
-  const rot = { R: 0, D: 90, L: 180, U: 270 }[dir];
-  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="transform:rotate(${rot}deg)" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg>`;
-};
+// A car seen from above, drawn facing right; it is turned to face its direction.
+// arrow: "roof" (big arrow on the roof), "hood" (small arrow on the bonnet, leaving the roof for a sum), or none.
+function carSVG(len, color, arrow) {
+  const W = len * 100, fill = COLORS[color], ink = isDark(color) ? "#1b1b1f" : "#fff", glass = "rgba(20,28,44,.6)";
+  let s = `<svg class="body" viewBox="-4 -4 ${W + 8} 108" aria-hidden="true">`;
+  // wheels poke out on both sides
+  for (const f of len === 3 ? [0.14, 0.48, 0.84] : [0.21, 0.77]) {
+    const x = W * f - 15;
+    s += `<rect x="${x}" y="0" width="30" height="18" rx="6" fill="#2b2d33"/><rect x="${x}" y="82" width="30" height="18" rx="6" fill="#2b2d33"/>`;
+  }
+  s += `<rect x="2" y="8" width="${W - 4}" height="84" rx="${len === 3 ? 20 : 28}" fill="${fill}" stroke="rgba(0,0,0,.25)" stroke-width="3"/>`;
+  if (len === 2) {
+    s += `<path d="M${W * .15} 26 Q${W * .12} 50 ${W * .15} 74 L${W * .25} 68 L${W * .25} 32 Z" fill="${glass}"/>`;       // rear window
+    s += `<rect x="${W * .27}" y="22" width="${W * .33}" height="56" rx="12" fill="rgba(255,255,255,.22)"/>`;              // roof
+    s += `<path d="M${W * .62} 30 L${W * .62} 70 L${W * .76} 82 Q${W * .81} 50 ${W * .76} 18 Z" fill="${glass}"/>`;        // windshield
+  } else {
+    s += `<rect x="${W * .05}" y="20" width="${W * .76}" height="60" rx="10" fill="rgba(255,255,255,.2)"/>`;              // long roof
+    s += `<rect x="${W * .2}" y="36" width="34" height="28" rx="5" fill="rgba(0,0,0,.16)"/><rect x="${W * .58}" y="36" width="34" height="28" rx="5" fill="rgba(0,0,0,.16)"/>`;
+    s += `<path d="M${W * .84} 20 L${W * .84} 80 L${W * .93} 86 Q${W * .96} 50 ${W * .93} 14 Z" fill="${glass}"/>`;       // windshield
+  }
+  s += `<circle cx="${W - 12}" cy="22" r="6" fill="#fff6c4"/><circle cx="${W - 12}" cy="78" r="6" fill="#fff6c4"/>`;     // headlights
+  s += `<rect x="6" y="16" width="8" height="14" rx="3" fill="#b3261e"/><rect x="6" y="70" width="8" height="14" rx="3" fill="#b3261e"/>`; // tail lights
+  if (arrow === "roof") {
+    const cx = len === 3 ? W * .43 : W * .43;
+    s += `<path d="M${cx - 24} 50 H${cx + 20} M${cx + 4} 33 L${cx + 21} 50 L${cx + 4} 67" fill="none" stroke="${ink}" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>`;
+  } else if (arrow === "hood") {
+    const cx = len === 3 ? W - 26 : W * .88;
+    s += `<path d="M${cx - 9} 50 H${cx + 8} M${cx} 41 L${cx + 9} 50 L${cx} 59" fill="none" stroke="${ink}" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>`;
+  }
+  return s + "</svg>";
+}
 const eqText = eq => `${eq[0]} ${eq[1]} ${eq[2]} =`;
 const isDark = color => color === DARK_TEXT;
 
@@ -336,12 +365,13 @@ function layout() {
     Object.assign(el.style, { left: car.x * cell + 2 + "px", top: car.y * cell + 2 + "px",
       width: (hor ? car.len : 1) * cell - 4 + "px", height: (hor ? 1 : car.len) * cell - 4 + "px",
       fontSize: Math.max(10, Math.min(15, cell * .3)) + "px" });
-    const svg = el.querySelector("svg");
-    if (car.eq) { // math: small arrow at the front, sum in the middle
-      const pos = { R: { right: "3px", top: "calc(50% - 8px)" }, L: { left: "3px", top: "calc(50% - 8px)" }, D: { bottom: "3px", left: "calc(50% - 8px)" }, U: { top: "3px", left: "calc(50% - 8px)" } }[car.dir];
-      Object.assign(svg.style, pos);
-      el.style.padding = { R: "0 18px 0 4px", L: "0 4px 0 18px", D: "0 0 16px", U: "16px 0 0" }[car.dir];
-    }
+    // The drawing faces right; turn it to face the car's direction.
+    const svg = el.querySelector("svg.body"), w = (hor ? car.len : 1) * cell - 4, h = (hor ? 1 : car.len) * cell - 4;
+    const long = hor ? w : h, short = hor ? h : w;
+    Object.assign(svg.style, { width: long + "px", height: short + "px", left: (w - long) / 2 + "px", top: (h - short) / 2 + "px",
+      transform: `rotate(${{ R: 0, D: 90, L: 180, U: -90 }[car.dir]}deg)` });
+    // math: keep the sum on the roof, away from the arrow on the bonnet
+    if (car.eq) el.style.padding = { R: `0 ${cell * .45}px 0 0`, L: `0 0 0 ${cell * .45}px`, D: `0 0 ${cell * .45}px`, U: `${cell * .45}px 0 0` }[car.dir];
   }
 }
 window.addEventListener("resize", () => g && layout());
@@ -354,13 +384,12 @@ function buildLot() {
   }
   for (const car of g.cars) {
     const el = document.createElement("button");
-    el.className = "car" + (isDark(car.color) ? " dark" : "") + (car.eq ? "" : " big");
+    el.className = "car";
     el.dataset.id = car.id;
-    el.style.background = COLORS[car.color];
     const hor = car.dir === "L" || car.dir === "R";
     let label = "";
-    if (car.eq) label = hor ? `<span class="lab">${eqText(car.eq)}</span>` : `<span class="lab">${car.eq[0]}</span><span class="lab">${car.eq[1]} ${car.eq[2]}</span><span class="lab">=</span>`;
-    el.innerHTML = arrowSVG(car.dir) + label;
+    if (car.eq) label = hor ? `<span class="lab">${eqText(car.eq)}</span>` : `<span class="lab"><span>${car.eq[0]}</span><span>${car.eq[1]} ${car.eq[2]}</span><span>=</span></span>`;
+    el.innerHTML = carSVG(car.len, car.color, car.eq ? "hood" : "roof") + label;
     const dirWord = { U: "up", D: "down", L: "left", R: "right" }[car.dir];
     el.setAttribute("aria-label", (car.eq ? car.eq.join(" ") + " equals what, " : "") + (car.len === 3 ? "bus" : "car") + ", drives " + dirWord);
     el.addEventListener("click", () => onTap(car.id));
@@ -380,7 +409,8 @@ function renderSlots() {
   $("slots").innerHTML = g.slots.map(sl => {
     if (!sl) return `<div class="slot" aria-label="Empty spot">P</div>`;
     const seats = Array.from({ length: sl.seats }, (_, i) => `<i class="${i < sl.filled ? "f" : ""}"></i>`).join("");
-    return `<div class="slot on${isDark(sl.color) ? " dark" : ""}" style="background:${COLORS[sl.color]}" aria-label="${sl.filled} of ${sl.seats} seats taken">${sl.eq ? `<span>${eqText(sl.eq)}</span>` : ""}<span class="seats">${seats}</span></div>`;
+    const len = sl.seats === SEATS[3] ? 3 : 2;
+    return `<div class="slot on" aria-label="${sl.filled} of ${sl.seats} seats taken"><span class="mini">${carSVG(len, sl.color, "")}${sl.eq ? `<span class="lab">${eqText(sl.eq)}</span>` : ""}</span><span class="seats">${seats}</span></div>`;
   }).join("");
 }
 
