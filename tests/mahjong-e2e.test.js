@@ -26,6 +26,9 @@ const done = async p => { assert.deepEqual(p.errors, []); await p.ctx.close(); }
 const state = p => p.evaluate(() => JSON.parse(JSON.stringify(window.__mahjong())));
 const idle = p => p.waitForFunction(() => !window.__mahjongBusy());
 const tap = async (p, id) => { await p.click(`#stack .tile[data-id="${id}"]`); await idle(p); };
+// Records every class name added to the page, so short animation pieces (sparks, smoke) are noticed even on a slow machine.
+const watch = p => p.evaluate(() => { window.__seen = new Set(); new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(n => n.classList && n.classList.forEach(c => window.__seen.add(c))))).observe(document.body, { childList: true, subtree: true }); });
+const seen = p => p.evaluate(() => [...window.__seen]);
 
 test('menu and board: tiles, an empty tray of 4, helpers with counts', { skip }, async () => {
   const p = await open();
@@ -105,12 +108,14 @@ test('with animations on: the tile flies to the tray and a pair pops with sparkl
   await p.click('#playBtn');
   await p.waitForTimeout(1500);
   const s = await state(p);
+  await watch(p);
   await p.click(`#stack .tile[data-id="${s.solution[0]}"]`);
-  await p.waitForSelector('.flyer');
   await idle(p);
   await p.click(`#stack .tile[data-id="${s.solution[1]}"]`);
-  await p.waitForSelector('.spark');
   await idle(p);
+  const pieces = await seen(p);
+  assert.ok(pieces.includes('flyer'), 'the tile flew to the tray');
+  assert.ok(pieces.includes('spark'), 'the pair popped with sparkles');
   assert.equal(await p.locator('#tray .tile').count(), 0);
   assert.equal(await p.locator('.flyer').count(), 0, 'animation pieces are cleaned up');
   await done(p);
