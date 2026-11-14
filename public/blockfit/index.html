@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2563eb">
+<title>Block Fit</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #ffffff; --fg: #1b1b1f; --muted: #6b7280; --border: #e5e7eb; --panel: #f9fafb; --link: #2563eb; --empty: #e9ecf1;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #14151a; --fg: #e7e7ea; --muted: #9aa0aa; --border: #2a2b32; --panel: #1b1c22; --link: #7db4ff; --empty: #23252d; }
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow: hidden; overscroll-behavior: none; touch-action: manipulation; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+    user-select: none; -webkit-user-select: none;
+  }
+  button { font: inherit; cursor: pointer; color: inherit; }
+  .hidden { display: none !important; }
+  :focus-visible { outline: 3px solid var(--link); outline-offset: 2px; }
+  .screen {
+    width: 100%; max-width: 440px; height: 100vh; height: 100dvh; margin: 0 auto; text-align: center;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); overflow: hidden; display: flex; flex-direction: column;
+  }
+  #menu { justify-content: center; align-items: center; }
+  .logo { display: block; margin: 0 auto 12px; }
+  h1 { font-size: 26px; margin: 0 0 8px; }
+  .tagline { color: var(--muted); margin: 0 0 28px; }
+  .menu-btns { display: flex; flex-direction: column; gap: 12px; align-items: center; margin-bottom: 20px; }
+  .card { border: 1px solid var(--border); background: var(--panel); border-radius: 12px; padding: 20px; text-align: left; }
+  .card p { margin: 0; font-size: 14px; line-height: 1.6; }
+  .card p + p { margin-top: 10px; }
+  .best { color: var(--muted); font-size: 13px; margin: -4px 0 16px; min-height: 1.2em; }
+  .back { margin-top: 16px; color: var(--muted); font-size: 14px; text-decoration: none; }
+  .pill {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: 999px;
+    padding: 12px 28px; background: var(--link); color: #fff; font-weight: 600; font-size: 15px;
+  }
+  .menu-btns .pill { min-width: 180px; }
+
+  .top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+  .iconbtn { border: 1px solid var(--border); background: var(--panel); border-radius: 999px; padding: 6px 14px; font-size: 13px; font-weight: 600; color: var(--muted); }
+  .bestsmall { font-size: 12px; color: var(--muted); min-width: 70px; text-align: right; }
+  .bestsmall b { color: var(--fg); }
+  .scoreline { font-size: 34px; font-weight: 800; line-height: 1.1; margin: 4px 0 2px; }
+  #msg { min-height: 1.5em; color: var(--muted); font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+  #msg.combo { color: var(--link); }
+
+  .boardwrap { flex: 1 1 0; min-height: 0; display: flex; align-items: center; justify-content: center; position: relative; }
+  #board { --gap: 3px; display: grid; grid-template-columns: repeat(8, 1fr); gap: var(--gap); padding: 6px;
+    width: min(100%, 52dvh); aspect-ratio: 1; border-radius: 12px; border: 1px solid var(--border); background: var(--panel); }
+  .cell { border-radius: 5px; background: var(--empty); }
+  .blk { position: relative; border-radius: 5px; box-shadow: inset 0 -3px 0 rgba(0,0,0,.18), inset 0 2px 0 rgba(255,255,255,.28); }
+  .cell.ghost { opacity: .45; }
+  .cell.willclear { filter: brightness(1.25); box-shadow: 0 0 0 2px var(--link); }
+  @media (prefers-reduced-motion: no-preference) {
+    .cell.pop { animation: pop .28s ease-out forwards; }
+    @keyframes pop { to { transform: scale(.2); opacity: 0; } }
+  }
+
+  .tray { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; height: 118px; flex: none; }
+  .slot { display: flex; align-items: center; justify-content: center; border-radius: 12px; touch-action: none; padding: 0;
+    border: 1px solid transparent; background: none; }
+  .slot.sel { border-color: var(--link); background: var(--panel); }
+  .slot.nofit .piece { opacity: .3; }
+  .piece { display: grid; gap: 2px; pointer-events: none; }
+  .piece i { width: 18px; height: 18px; display: block; }
+  .piece i.blk { border-radius: 4px; }
+  .float { position: fixed; z-index: 20; pointer-events: none; display: grid; filter: drop-shadow(0 8px 12px rgba(0,0,0,.25)); }
+  .float i { display: block; }
+
+  .overlay { position: absolute; inset: 0; display: flex; flex-direction: column; gap: 12px; align-items: center; justify-content: center;
+    background: color-mix(in srgb, var(--bg) 85%, transparent); border-radius: 12px; }
+  .overlay h2 { margin: 0; font-size: 22px; }
+  .overlay p { margin: 0; color: var(--muted); font-size: 14px; }
+
+  #rotate { display: none; position: fixed; inset: 0; z-index: 10; background: var(--bg); color: var(--muted); align-items: center; justify-content: center; text-align: center; }
+  @media (orientation: landscape) and (pointer: coarse) { #rotate { display: flex; } .screen { display: none; } }
+</style>
+</head>
+<body>
+
+<main class="screen" id="menu">
+  <svg class="logo" width="56" height="56" viewBox="0 0 32 32" aria-hidden="true">
+    <rect width="32" height="32" rx="8" fill="#1f2937"/>
+    <rect x="5" y="5" width="6.5" height="6.5" rx="1.5" fill="#3bc14f"/><rect x="12.75" y="5" width="6.5" height="6.5" rx="1.5" fill="#3bc14f"/>
+    <rect x="20.5" y="5" width="6.5" height="6.5" rx="1.5" fill="#f2b705"/><rect x="20.5" y="12.75" width="6.5" height="6.5" rx="1.5" fill="#f2b705"/>
+    <rect x="5" y="12.75" width="6.5" height="6.5" rx="1.5" fill="#3a3f4b"/><rect x="12.75" y="12.75" width="6.5" height="6.5" rx="1.5" fill="#3a3f4b"/>
+    <rect x="5" y="20.5" width="6.5" height="6.5" rx="1.5" fill="#2f6fe8"/><rect x="12.75" y="20.5" width="6.5" height="6.5" rx="1.5" fill="#e23a2e"/><rect x="20.5" y="20.5" width="6.5" height="6.5" rx="1.5" fill="#e23a2e"/>
+  </svg>
+  <h1>Block Fit</h1>
+  <p class="tagline">Drag shapes onto the grid. Fill lines to clear them.</p>
+  <div class="menu-btns">
+    <button class="pill" id="playBtn">Play &rarr;</button>
+  </div>
+  <div class="best" id="best"></div>
+  <div class="card">
+    <p>Drag a shape from the bottom onto the grid. Or tap a shape, then tap the square where its top block should go.</p>
+    <p>Fill a whole row or column and it clears. Clear lines one move after another for a combo with extra points.</p>
+    <p>When all three shapes are used you get three new ones. The game ends when none of your shapes fit.</p>
+  </div>
+  <a class="back" href="../index.html">&larr; All games</a>
+</main>
+
+<main class="screen hidden" id="game">
+  <div class="top">
+    <button class="iconbtn" id="menuBtn" aria-label="Back to menu">&larr; Menu</button>
+    <div class="bestsmall">Best <b id="bestNow">0</b></div>
+  </div>
+  <div class="scoreline" id="score" aria-live="polite">0</div>
+  <div id="msg" role="status"></div>
+  <div class="boardwrap">
+    <div id="board" role="grid" aria-label="Grid, 8 by 8"></div>
+    <div class="overlay hidden" id="overlay" role="alert">
+      <h2>No more room</h2>
+      <p id="ovText"></p>
+      <button class="pill" id="againBtn">Play again</button>
+    </div>
+  </div>
+  <div class="tray" id="tray" role="group" aria-label="Shapes"></div>
+</main>
+
+<div id="rotate" role="alert"><div><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg><p>Turn your phone upright to play.</p></div></div>
+
+<script>
+// ---------- Rules (pure, no DOM; exported for tests) ----------
+const N = 8;
+const COLORS = ["#e23a2e", "#f28c28", "#f2b705", "#3bc14f", "#2bb5c9", "#2f6fe8", "#9b5de5"];
+// Base shapes, rows split by "/". Each one is also used in all its turned positions.
+const BASE = ["#", "##", "###", "####", "#####", "##/##", "###/###/###", "##/#.", "###/#../#..", "###/#..", "###/..#", "###/.#.", "##./.##", ".##/##."];
+
+const parse = s => s.split("/").flatMap((row, r) => [...row].flatMap((ch, c) => ch === "#" ? [[r, c]] : []));
+const norm = cells => {
+  const r0 = Math.min(...cells.map(p => p[0])), c0 = Math.min(...cells.map(p => p[1]));
+  return cells.map(([r, c]) => [r - r0, c - c0]).sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+};
+const turn = cells => norm(cells.map(([r, c]) => [c, -r]));
+const key = cells => cells.map(p => p.join(",")).join(" ");
+// For each base shape, its distinct turned positions.
+const SHAPES = BASE.map(s => {
+  const out = []; let cur = norm(parse(s));
+  for (let i = 0; i < 4; i++) { if (!out.some(o => key(o) === key(cur))) out.push(cur); cur = turn(cur); }
+  return out;
+});
+const sizeOf = cells => ({ h: Math.max(...cells.map(p => p[0])) + 1, w: Math.max(...cells.map(p => p[1])) + 1 });
+
+const emptyBoard = () => Array.from({ length: N }, () => Array(N).fill(0));
+function canPlace(board, cells, r, c) {
+  return cells.every(([dr, dc]) => { const y = r + dr, x = c + dc; return y >= 0 && y < N && x >= 0 && x < N && !board[y][x]; });
+}
+// Puts the shape down and clears any full rows and columns (both at once).
+function place(board, cells, r, c, color) {
+  const b = board.map(row => row.slice());
+  for (const [dr, dc] of cells) b[r + dr][c + dc] = color;
+  const rows = [], cols = [];
+  for (let i = 0; i < N; i++) { if (b[i].every(Boolean)) rows.push(i); if (b.every(row => row[i])) cols.push(i); }
+  for (const i of rows) b[i].fill(0);
+  for (const i of cols) for (const row of b) row[i] = 0;
+  return { board: b, rows, cols, lines: rows.length + cols.length };
+}
+function fitsAnywhere(board, cells) {
+  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) if (canPlace(board, cells, r, c)) return true;
+  return false;
+}
+// Points: one per block placed, plus a line bonus that grows with lines at once and with the combo streak.
+const pointsFor = (blocks, lines, streak) => blocks + (lines ? 10 * lines * lines * streak : 0);
+
+function randomPiece(rand = Math.random) {
+  const turns = SHAPES[Math.floor(rand() * SHAPES.length)];
+  return { cells: turns[Math.floor(rand() * turns.length)], color: 1 + Math.floor(rand() * COLORS.length) };
+}
+// Three new shapes. Tries a few times so that at least one of them fits, if the board allows it.
+function deal(board, rand = Math.random) {
+  let set;
+  for (let i = 0; i < 30; i++) {
+    set = [randomPiece(rand), randomPiece(rand), randomPiece(rand)];
+    if (set.some(p => fitsAnywhere(board, p.cells))) break;
+  }
+  return set;
+}
+
+function newGame(rand = Math.random) { const board = emptyBoard(); return { board, tray: deal(board, rand), score: 0, streak: 0, over: false, rand }; }
+// Plays tray piece i at (r, c). Returns the clear result, or null if it doesn't fit.
+function play(g, i, r, c) {
+  const p = g.tray[i];
+  if (g.over || !p || !canPlace(g.board, p.cells, r, c)) return null;
+  const res = place(g.board, p.cells, r, c, p.color);
+  g.board = res.board;
+  g.streak = res.lines ? g.streak + 1 : 0;
+  res.points = pointsFor(p.cells.length, res.lines, g.streak);
+  g.score += res.points;
+  g.tray[i] = null;
+  if (g.tray.every(t => !t)) g.tray = deal(g.board, g.rand);
+  g.over = !g.tray.some(t => t && fitsAnywhere(g.board, t.cells));
+  return res;
+}
+
+if (typeof document === "undefined") {
+  module.exports = { N, COLORS, BASE, SHAPES, sizeOf, emptyBoard, canPlace, place, fitsAnywhere, pointsFor, randomPiece, deal, newGame, play };
+} else {
+// ---------- Page ----------
+const $ = id => document.getElementById(id);
+const boardEl = $("board"), trayEl = $("tray");
+const BEST_KEY = "blockfit-best";
+const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+const best = () => +store.get(BEST_KEY) || 0;
+let g = null, sel = -1, drag = null, busy = false;
+window.__blockfit = () => g;
+
+function showBest() { const b = best(); $("best").textContent = b ? "Best score: " + b : ""; }
+showBest();
+
+// Board: 64 cells, built once.
+const cells = [];
+for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
+  const d = document.createElement("div");
+  d.className = "cell"; d.dataset.r = r; d.dataset.c = c; d.setAttribute("role", "gridcell");
+  boardEl.appendChild(d); cells.push(d);
+}
+const cellAt = (r, c) => cells[r * N + c];
+const paint = (el, v) => { el.className = v ? "cell blk" : "cell"; el.style.background = v ? COLORS[v - 1] : ""; };
+
+function renderBoard() {
+  g.board.forEach((row, r) => row.forEach((v, c) => paint(cellAt(r, c), v)));
+}
+function pieceHTML(p, size, gap) {
+  const { w, h } = sizeOf(p.cells), on = new Set(p.cells.map(q => q.join(",")));
+  let html = "";
+  for (let r = 0; r < h; r++) for (let c = 0; c < w; c++)
+    html += on.has(r + "," + c) ? `<i class="blk" style="background:${COLORS[p.color - 1]};width:${size}px;height:${size}px"></i>` : `<i style="width:${size}px;height:${size}px"></i>`;
+  return `<div class="piece" style="grid-template-columns:repeat(${w},${size}px);gap:${gap}px">${html}</div>`;
+}
+function renderTray() {
+  trayEl.innerHTML = g.tray.map((p, i) => {
+    if (!p) return `<div class="slot"></div>`;
+    const fit = fitsAnywhere(g.board, p.cells), { w, h } = sizeOf(p.cells);
+    return `<button class="slot${i === sel ? " sel" : ""}${fit ? "" : " nofit"}" data-i="${i}" aria-label="Shape ${i + 1}, ${p.cells.length} blocks, ${w} wide and ${h} tall">${pieceHTML(p, 18, 2)}</button>`;
+  }).join("");
+}
+function render() {
+  renderBoard(); renderTray();
+  $("score").textContent = g.score;
+  $("bestNow").textContent = Math.max(best(), g.score);
+}
+
+// Preview: shows where a shape would land and which lines it would clear.
+function clearPreview() { renderBoard(); }
+function preview(i, r, c) {
+  clearPreview();
+  const p = g.tray[i];
+  if (!p || !canPlace(g.board, p.cells, r, c)) return false;
+  const res = place(g.board, p.cells, r, c, p.color);
+  for (const [dr, dc] of p.cells) { const el = cellAt(r + dr, c + dc); paint(el, p.color); el.classList.add("ghost"); }
+  for (const y of res.rows) for (let x = 0; x < N; x++) { const el = cellAt(y, x); if (!g.board[y][x]) paint(el, p.color); el.classList.add("willclear"); }
+  for (const x of res.cols) for (let y = 0; y < N; y++) { const el = cellAt(y, x); if (!g.board[y][x]) paint(el, p.color); el.classList.add("willclear"); }
+  return true;
+}
+
+function say(text, combo) { const m = $("msg"); m.textContent = text; m.classList.toggle("combo", !!combo); }
+function tryPlay(i, r, c) {
+  if (busy) return false;
+  const before = g.board, p = g.tray[i];
+  const res = play(g, i, r, c);
+  if (!res) return false;
+  sel = -1;
+  if (res.lines) {
+    say((res.lines > 1 ? res.lines + " lines! " : "Line! ") + (g.streak > 1 ? "Combo x" + g.streak + " " : "") + "+" + res.points, true);
+    renderTray(); $("score").textContent = g.score;
+    // Draw the board with the new shape on it, then let the full lines pop before showing the result.
+    before.forEach((row, y) => row.forEach((v, x) => paint(cellAt(y, x), v)));
+    for (const [dr, dc] of p.cells) paint(cellAt(r + dr, c + dc), p.color);
+    for (const y of res.rows) for (let x = 0; x < N; x++) cellAt(y, x).classList.add("pop");
+    for (const x of res.cols) for (let y = 0; y < N; y++) cellAt(y, x).classList.add("pop");
+    busy = true;
+    setTimeout(() => { busy = false; render(); checkOver(); }, 280);
+  } else {
+    say("");
+    render(); checkOver();
+  }
+  return true;
+}
+function checkOver() {
+  if (!g.over) return;
+  const b = best(), isBest = g.score > b;
+  if (isBest) store.set(BEST_KEY, g.score);
+  $("ovText").textContent = isBest && g.score > 0 ? "New best score: " + g.score + "!" : "Score: " + g.score;
+  $("overlay").classList.remove("hidden");
+}
+
+function start() {
+  g = newGame(); sel = -1; busy = false;
+  $("menu").classList.add("hidden"); $("game").classList.remove("hidden"); $("overlay").classList.add("hidden");
+  say("Drag a shape onto the grid.");
+  render();
+}
+function toMenu() { g = null; showBest(); $("game").classList.add("hidden"); $("menu").classList.remove("hidden"); }
+$("playBtn").onclick = start;
+$("againBtn").onclick = start;
+$("menuBtn").onclick = toMenu;
+
+// Cell size on screen, measured from the board.
+function metrics() {
+  const a = cells[0].getBoundingClientRect(), b = cells[1].getBoundingClientRect();
+  return { left: a.left, top: a.top, size: a.width, pitch: b.left - a.left };
+}
+
+// Dragging a shape from the tray.
+trayEl.addEventListener("pointerdown", e => {
+  const slot = e.target.closest(".slot[data-i]");
+  if (!slot || !g || g.over || busy) return;
+  e.preventDefault();
+  const i = +slot.dataset.i, p = g.tray[i], m = metrics(), { w, h } = sizeOf(p.cells);
+  const el = document.createElement("div");
+  el.className = "float";
+  el.innerHTML = pieceHTML(p, m.size, m.pitch - m.size);
+  document.body.appendChild(el);
+  // On touch, lift the shape above the finger so it stays visible.
+  const lift = e.pointerType === "mouse" ? 0 : m.pitch * 1.6 + 20;
+  drag = { i, el, w, h, m, lift, x0: e.clientX, y0: e.clientY, moved: false, at: null, id: e.pointerId };
+  slot.style.visibility = "hidden";
+  moveDrag(e);
+  try { trayEl.setPointerCapture(e.pointerId); } catch (err) {}
+});
+function moveDrag(e) {
+  const d = drag, m = d.m;
+  if (Math.hypot(e.clientX - d.x0, e.clientY - d.y0) > 8) d.moved = true;
+  const left = e.clientX - (d.w * m.pitch) / 2, top = e.clientY - d.h * m.pitch / 2 - d.lift;
+  d.el.style.left = left + "px"; d.el.style.top = top + "px";
+  const c = Math.round((left - m.left) / m.pitch), r = Math.round((top - m.top) / m.pitch);
+  d.at = preview(d.i, r, c) ? [r, c] : null;
+}
+trayEl.addEventListener("pointermove", e => { if (drag && e.pointerId === drag.id) moveDrag(e); });
+function endDrag(e, cancel) {
+  if (!drag || e.pointerId !== drag.id) return;
+  const d = drag; drag = null;
+  d.el.remove();
+  clearPreview();
+  if (!cancel && d.at && d.moved) { tryPlay(d.i, d.at[0], d.at[1]); return; }
+  if (!cancel && !d.moved) { sel = sel === d.i ? -1 : d.i; say(sel >= 0 ? "Now tap the square where its top block should go." : ""); }
+  renderTray();
+}
+trayEl.addEventListener("pointerup", e => endDrag(e, false));
+trayEl.addEventListener("pointercancel", e => endDrag(e, true));
+
+// Tap-to-place: tap a shape, then tap a cell for its top-left block. Hover shows a preview.
+boardEl.addEventListener("click", e => {
+  const el = e.target.closest(".cell");
+  if (!el || !g || sel < 0) return;
+  const r = +el.dataset.r, c = +el.dataset.c, p = g.tray[sel];
+  // Anchor the shape's first block (top row) on the tapped cell.
+  const [r0, c0] = p.cells[0];
+  if (!tryPlay(sel, r - r0, c - c0)) say("That shape doesn't fit there.");
+});
+boardEl.addEventListener("pointermove", e => {
+  if (drag || !g || sel < 0 || e.pointerType !== "mouse") return;
+  const el = e.target.closest(".cell"); if (!el) return;
+  const [r0, c0] = g.tray[sel].cells[0];
+  preview(sel, +el.dataset.r - r0, +el.dataset.c - c0);
+});
+boardEl.addEventListener("pointerleave", () => { if (!drag && g) clearPreview(); });
+}
+</script>
+</body>
+</html>
