@@ -24,12 +24,12 @@ async function open({ width = 390, height = 844 } = {}) {
 }
 const done = async p => { assert.deepEqual(p.errors, []); await p.ctx.close(); };
 const state = p => p.evaluate(() => JSON.parse(JSON.stringify(window.__colorrides())));
-const idle = p => p.waitForFunction(() => document.querySelectorAll('.car[disabled]').length === 0);
+const idle = p => p.waitForFunction(() => !window.__colorridesBusy());
 
 // Taps the cars in the known winning order.
 async function solve(p) {
   const s = await state(p);
-  for (const id of s.order) { await p.click(`.car[data-id="${id}"]`); await idle(p); await p.waitForTimeout(30); }
+  for (const id of s.order) { await p.click(`.car[data-id="${id}"]`); await idle(p); }
 }
 
 for (const mode of ['colors', 'easy', 'hard']) {
@@ -43,7 +43,7 @@ for (const mode of ['colors', 'easy', 'hard']) {
       // cars show their sum, people show answers
       const first = s.cars[0];
       assert.match(await p.textContent(`.car[data-id="${first.id}"]`), new RegExp(String(first.eq[0])));
-      assert.equal(await p.textContent('#queue .p'), String(s.queue[0]));
+      assert.equal(await p.textContent('#queue .pp b'), String(s.queue[0]));
     }
     await solve(p);
     await p.waitForFunction(() => document.getElementById('waiting').textContent === '0');
@@ -70,6 +70,27 @@ test('a blocked car shakes and stays; a free car parks in a spot', { skip }, asy
   }
   await p.click(`.car[data-id="${s.order[0]}"]`); await idle(p);
   assert.ok((await state(p)).cars[s.order[0]].gone);
+  await done(p);
+});
+
+test('with animations on, a car glides into a spot and people hop in; the game still wins', { skip }, async () => {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  const p = await ctx.newPage();
+  p.errors = []; p.on('pageerror', e => p.errors.push(e.message));
+  await p.goto(URL); p.ctx = ctx;
+  await p.click('[data-mode=colors]');
+  const s = await state(p);
+  await p.click(`.car[data-id="${s.order[0]}"]`);
+  await p.waitForSelector('.flyer');                       // the car is on its way to a spot
+  assert.ok(await p.evaluate(() => window.__colorridesBusy()));
+  await p.click(`.car[data-id="${s.order[1]}"]`);           // taps while busy are ignored
+  await idle(p);
+  const after = await state(p);
+  assert.ok(after.cars[s.order[0]].gone);
+  assert.ok(!after.cars[s.order[1]].gone, 'second tap during the animation was ignored');
+  assert.equal(await p.locator('.flyer, .hopper').count(), 0, 'animation pieces are cleaned up');
+  for (const id of s.order.slice(1)) { await p.click(`.car[data-id="${id}"]`); await idle(p); }
+  assert.match(await p.textContent('#msg'), /Everyone got a ride/);
   await done(p);
 });
 
