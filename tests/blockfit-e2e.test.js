@@ -95,7 +95,7 @@ test('tap a shape then tap a square places it; a full row clears', { skip }, asy
   await done(p);
 });
 
-test('game over shows the score and Play again starts fresh', { skip }, async () => {
+test('game over: the animated card says why and how many scenes; tapping starts fresh', { skip }, async () => {
   const p = await open();
   await p.evaluate(() => {
     const g = window.__blockfit();
@@ -105,11 +105,15 @@ test('game over shows the score and Play again starts fresh', { skip }, async ()
     g.tray = [{ cells: [[0, 0]], color: 1 }, { cells: [[0, 0], [0, 1]], color: 1 }, null];
   });
   await drag(p, 0, 0, 0);
-  assert.ok(await p.isVisible('#againBtn'));
   assert.match(await p.textContent('#msg'), /No more room/);
   assert.match(await p.textContent('#msg'), /finished 0 scenes/);
-  await p.click('#againBtn');
-  assert.ok(!(await p.isVisible('#againBtn')));
+  await p.waitForSelector('#gameover.show');
+  assert.match(await p.textContent('#goReason'), /No room left for any of your shapes/);
+  assert.equal(await p.textContent('#goStages'), '0');
+  assert.equal(await p.textContent('#goStagesLabel'), 'scenes completed');
+  await p.waitForTimeout(800);
+  await p.click('#gameover');
+  assert.ok(!(await p.isVisible('#gameover')));
   const s = await state(p);
   assert.equal(s.scene, 1); assert.equal(s.score, 0);
   await p.click('#menuBtn');

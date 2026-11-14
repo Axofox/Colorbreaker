@@ -9,9 +9,11 @@
   :root {
     color-scheme: light dark;
     --bg: #ffffff; --fg: #1b1b1f; --muted: #6b7280; --border: #e5e7eb; --panel: #f9fafb; --link: #2563eb; --hole: #eef0f3;
+    --road: #4b5060; --walk: #dfe3ea;
   }
   @media (prefers-color-scheme: dark) {
-    :root { --bg: #14151a; --fg: #e7e7ea; --muted: #9aa0aa; --border: #2a2b32; --panel: #1b1c22; --link: #7db4ff; --hole: #23242b; }
+    :root { --bg: #14151a; --fg: #e7e7ea; --muted: #9aa0aa; --border: #2a2b32; --panel: #1b1c22; --link: #7db4ff; --hole: #23242b;
+      --road: #30333d; --walk: #2a2c34; }
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { height: 100%; overflow: hidden; overscroll-behavior: none; touch-action: manipulation; }
@@ -42,38 +44,42 @@
     padding: 12px 28px; background: var(--link); color: #fff; font-weight: 600; font-size: 15px;
   }
   .pill:hover { opacity: .9; }
-  .menu-btns > .pill { min-width: 220px; }
+  .menu-btns > .pill { min-width: 220px; flex-direction: column; gap: 0; line-height: 1.25; }
   .row-btns { display: flex; gap: 8px; }
   .row-btns .pill { padding: 12px 16px; flex-direction: column; gap: 0; line-height: 1.25; }
-  .row-btns .pill small { font-weight: 500; font-size: 12px; opacity: .85; }
+  .pill small { font-weight: 500; font-size: 12px; opacity: .85; }
 
   .top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
   .top h2 { margin: 0; font-size: 18px; }
   .iconbtn { border: 1px solid var(--border); background: var(--panel); border-radius: 999px; padding: 6px 14px; font-size: 13px; font-weight: 600; color: var(--muted); }
   .scorebox { font-size: 13px; color: var(--muted); min-width: 70px; text-align: right; }
   .scorebox b { color: var(--fg); font-size: 16px; }
-  .status { display: flex; justify-content: center; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 14px; color: var(--muted); }
+  .status { display: flex; justify-content: center; align-items: center; gap: 12px; margin-bottom: 8px; font-size: 14px; color: var(--muted); }
   .status b { color: var(--fg); font-size: 16px; }
+  section { display: flex; flex-direction: column; flex: 1 1 0; min-height: 0; }
 
-  /* the queue of people: first in line on the left */
-  #queue { display: flex; gap: 4px; overflow: hidden; height: 38px; align-items: center; margin-bottom: 8px; padding: 0 2px; }
-  .pp { flex: none; position: relative; width: 22px; height: 30px; }
+  /* people: a head and a body; in math they carry their number */
+  .pp { display: block; flex: none; position: relative; width: 22px; height: 30px; }
   .pp i { position: absolute; top: 0; left: 6px; width: 10px; height: 10px; border-radius: 50%; background: var(--c); }
   .pp b { position: absolute; bottom: 0; left: 0; width: 22px; height: 18px; border-radius: 10px 10px 5px 5px; background: var(--c);
     display: grid; place-items: center; font-size: 11px; font-weight: 800; line-height: 1; color: var(--fg); }
   .pp.num i { background: var(--muted); }
   .pp.num b { background: var(--bg); border: 2px solid var(--muted); }
-  .pp.first b { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--link); }
-  .hopper { position: fixed; z-index: 30; pointer-events: none; margin: 0; }
-  .flyer { position: fixed; left: 0; top: 0; z-index: 30; pointer-events: none; display: grid; place-items: center; transform-origin: center; }
-  .flyer svg { position: absolute; inset: 0; width: 100%; height: 100%; }
-  .flyer .lab { font-size: 13px; font-weight: 800; }
+  .pp.big { width: 48px; height: 66px; }
+  .pp.big i { width: 22px; height: 22px; left: 13px; }
+  .pp.big b { width: 48px; height: 40px; border-radius: 22px 22px 10px 10px; font-size: 22px; border-width: 3px; border-color: var(--link); }
 
-  /* parking spots */
-  #slots { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 10px; }
+  /* Colors: people walk round a loop; the gate at the bottom leads to the parking spots */
+  #ring { position: relative; height: 128px; flex: none; margin-bottom: 4px; }
+  #track { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  #walkers .pp { position: absolute; left: 0; top: 0; will-change: transform; }
+  .ring-count { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); color: var(--muted); font-size: 12px; line-height: 1.1; pointer-events: none; }
+  .ring-count b { display: block; color: var(--fg); font-size: 22px; }
+
+  #slots { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 10px; flex: none; }
   .slot { height: 56px; border-radius: 10px; border: 2px dashed var(--border); display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 4px; color: var(--muted); font-weight: 700; font-size: 18px; }
-  .slot.on { border: 1px solid var(--border); background: var(--bg); color: var(--fg); font-size: 12px; gap: 3px; }
+    gap: 3px; color: var(--muted); font-weight: 700; font-size: 18px; position: relative; }
+  .slot.on { border: 1px solid var(--border); background: var(--bg); color: var(--fg); font-size: 12px; }
   .mini { position: relative; width: 94%; height: 28px; display: grid; place-items: center; }
   .mini svg { position: absolute; inset: 0; width: 100%; height: 100%; }
   .seats { display: flex; gap: 3px; }
@@ -83,23 +89,75 @@
   .board { flex: 1 1 0; min-height: 0; overflow: hidden; display: flex; align-items: center; justify-content: center;
     border: 1px solid var(--border); background: var(--panel); border-radius: 12px; padding: 8px; }
   #lot { position: relative; overflow: hidden; border-radius: 8px; }
-  .spot { position: absolute; border-radius: 8px; background: var(--hole); border: 1px solid var(--border); }
+  .spot { position: absolute; border-radius: 7px; background: var(--hole); border: 1px solid var(--border); }
   .car { position: absolute; padding: 0; border: 0; background: none; color: #fff; display: flex; flex-direction: column;
     align-items: center; justify-content: center; font-weight: 800; line-height: 1.05; }
   .car svg.body { position: absolute; transform-origin: center; overflow: visible; }
-  /* the sum sits on a dark sign on the roof, so it reads on every car color */
-  .lab { position: relative; white-space: nowrap; background: rgba(15,20,30,.55); color: #fff; border-radius: 6px; padding: 2px 4px;
-    display: flex; flex-direction: column; align-items: center; }
-  .slot .lab { font-size: 11px; padding: 1px 4px; }
+  .lab { position: relative; white-space: nowrap; background: rgba(15,20,30,.6); color: #fff; border-radius: 6px; padding: 2px 6px;
+    display: flex; flex-direction: column; align-items: center; font-weight: 800; }
   .shake-row { animation: shake2 .3s; }
   @keyframes shake2 { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+
+  /* Math: one passenger waits on the pavement; the right car drives up to the road in front of them */
+  #curb { position: relative; height: 118px; flex: none; margin-bottom: 10px; border-radius: 12px; overflow: hidden; border: 1px solid var(--border); }
+  .sidewalk { position: absolute; left: 0; right: 0; top: 0; height: 64px; background: var(--walk); }
+  .road { position: absolute; left: 0; right: 0; bottom: 0; height: 54px; background: var(--road); }
+  .road i { position: absolute; left: 0; right: 0; top: 50%; border-top: 3px dashed rgba(255,255,255,.55); }
+  #rider { position: absolute; left: 50%; top: 2px; margin-left: -24px; z-index: 2; }
+  .hearts { display: inline-flex; gap: 4px; }
+  .hearts svg { width: 20px; height: 20px; }
+  .hearts .gone path { fill: var(--border); }
+  #garage { display: grid; grid-template-columns: repeat(2, auto); gap: 10px 12px; justify-content: center; align-content: center; }
+  .gcar { position: relative; padding: 0; border: 0; background: none; display: grid; place-items: center; }
+  .gcar svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  .gcar .lab { font-size: 18px; padding: 3px 8px; }
+
+  .flyer { position: fixed; left: 0; top: 0; z-index: 30; pointer-events: none; display: grid; place-items: center; transform-origin: center; }
+  .flyer svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  .flyer .lab { font-size: 13px; }
+  .hopper { position: fixed; z-index: 31; pointer-events: none; margin: 0; left: 0; top: 0; }
+  .smoke { position: fixed; z-index: 29; pointer-events: none; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%; background: rgba(160,165,175,.55); }
+
+  .stagebanner { position: fixed; left: 50%; top: 42%; z-index: 40; width: 260px; margin-left: -130px; padding: 14px 16px; border-radius: 16px; text-align: center;
+    background: var(--bg); border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(0,0,0,.18); pointer-events: none; }
+  .stagebanner b { display: block; font-size: 22px; }
+  .stagebanner span { color: var(--muted); font-size: 14px; }
+  @media (prefers-reduced-motion: no-preference) {
+    .stagebanner { animation: bannerIn .45s cubic-bezier(.2,1.6,.4,1) both; }
+    @keyframes bannerIn { from { transform: scale(.3); opacity: 0; } }
+  }
   @media (prefers-reduced-motion: reduce) { .shake-row { animation: none; } }
 
-  .actions { display: flex; gap: 10px; justify-content: center; margin-top: 10px; }
-  #msg { min-height: 2.8em; margin-top: 8px; color: var(--muted); font-size: 14px; line-height: 1.4; }
+  .actions { display: flex; gap: 10px; justify-content: center; margin-top: 10px; flex: none; }
+  #msg { min-height: 2.8em; margin-top: 8px; color: var(--muted); font-size: 14px; line-height: 1.4; flex: none; }
 
-  #rotate { display: none; position: fixed; inset: 0; z-index: 10; background: var(--bg); color: var(--muted); align-items: center; justify-content: center; text-align: center; }
+  #rotate { display: none; position: fixed; inset: 0; z-index: 60; background: var(--bg); color: var(--muted); align-items: center; justify-content: center; text-align: center; }
   @media (orientation: landscape) and (pointer: coarse) { #rotate { display: flex; } .screen { display: none; } }
+  /* Game over: an animated card over the game; tap anywhere to play again. */
+  .gameover { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: 16px;
+    background: rgba(10,12,18,.45); cursor: pointer; }
+  .go-card { width: min(100%, 320px); background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 20px;
+    padding: 22px 20px 16px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,.28); outline: none; }
+  .go-icon { display: block; margin: 0 auto; }
+  .go-card h2 { margin: 8px 0 6px; font-size: 26px; }
+  .go-reason { color: var(--muted); font-size: 15px; line-height: 1.4; margin: 0 0 16px; }
+  .go-stats { display: flex; justify-content: center; gap: 32px; margin-bottom: 14px; }
+  .go-stats b { display: block; font-size: 32px; line-height: 1.1; }
+  .go-stats span { font-size: 12px; color: var(--muted); }
+  .go-tap { color: var(--link); font-weight: 700; margin: 0; }
+  .go-menu { margin-top: 8px; background: none; border: 0; color: var(--muted); font-size: 13px; text-decoration: underline; padding: 6px; }
+  @media (prefers-reduced-motion: no-preference) {
+    .gameover.show { animation: goFade .3s ease-out both; }
+    .gameover.show .go-card { animation: goDrop .65s cubic-bezier(.2,1.35,.4,1) .05s both; }
+    .gameover.show .go-icon { animation: goWobble .9s ease-in-out .55s 2; }
+    .gameover.show .go-stats b { animation: goPop .4s cubic-bezier(.2,1.6,.4,1) .6s both; }
+    .gameover.show .go-tap { animation: goPulse 1.6s ease-in-out 1s infinite; }
+    @keyframes goFade { from { opacity: 0; } }
+    @keyframes goDrop { from { transform: translateY(-70vh) rotate(-8deg); opacity: 0; } 50% { opacity: 1; } }
+    @keyframes goWobble { 25% { transform: rotate(-12deg); } 75% { transform: rotate(12deg); } }
+    @keyframes goPop { from { transform: scale(0); } }
+    @keyframes goPulse { 50% { opacity: .4; } }
+  }
 </style>
 </head>
 <body>
@@ -113,7 +171,7 @@
     <circle cx="7" cy="26" r="2.4" fill="#e23a2e"/><circle cx="12.5" cy="26" r="2.4" fill="#2f6fe8"/><circle cx="18" cy="26" r="2.4" fill="#f7dc1a"/><circle cx="23.5" cy="26" r="2.4" fill="#3bc14f"/>
   </svg>
   <h1>Color Rides</h1>
-  <p class="tagline">Drive the cars out and give everyone a ride.</p>
+  <p class="tagline">Give everyone a ride.</p>
   <div class="menu-btns">
     <button class="pill" data-mode="colors">Colors &rarr;</button>
     <div class="menu-label">With math</div>
@@ -124,9 +182,8 @@
     </div>
   </div>
   <div class="card">
-    <p>Tap a car to drive it out the way its arrow points. It can only go if nothing is in the way. Then it waits in a parking spot.</p>
-    <p><strong>Colors</strong>: people get on a car of their color. <strong>With math</strong>: each car has a sum, and people get on the car whose answer is their number.</p>
-    <p>A full car drives away. There are only 4 parking spots (5 on the first levels), so <strong>plan ahead</strong>: if the car you need is blocked, move the cars in its way first. If every spot is full and nobody in front can get on, try again.</p>
+    <p><strong>Colors</strong>: people walk round and round. Tap a car to drive it out the way its arrow points (only if nothing is in the way). It parks in one of the <strong>4 spots</strong>, and people of its color get in as they walk past the exit. If all 4 spots are full and nobody fits, the game is over.</p>
+    <p><strong>With math</strong>: a passenger is waiting with a number. Tap the car whose sum makes that number. The car picks them up! 3 wrong cars and the game is over.</p>
   </div>
   <a class="back" href="../index.html">&larr; All games</a>
 </main>
@@ -135,23 +192,45 @@
   <div class="top">
     <button class="iconbtn" id="menuBtn" aria-label="Back to menu">&larr; Menu</button>
     <h2 id="modeName">Colors</h2>
-    <div class="scorebox">Level <b id="level">1</b></div>
+    <div class="scorebox">Stage <b id="stage">1</b></div>
   </div>
-  <div class="status">Waiting <b id="waiting">0</b></div>
-  <div id="queue" aria-label="People waiting, first in line on the left"></div>
-  <div id="slots" role="group" aria-label="Parking spots"></div>
-  <div class="board"><div id="lot" role="group" aria-label="Car park"></div></div>
-  <div class="actions hidden" id="actions"><button class="pill" id="nextBtn">Next level &rarr;</button></div>
+  <section id="colorsView">
+    <div id="ring" aria-label="People walking round the station">
+      <svg id="track" aria-hidden="true"></svg>
+      <div class="ring-count"><b id="waiting">0</b>waiting</div>
+      <div id="walkers"></div>
+    </div>
+    <div id="slots" role="group" aria-label="Parking spots"></div>
+    <div class="board"><div id="lot" role="group" aria-label="Car park"></div></div>
+  </section>
+  <section id="mathView" class="hidden">
+    <div class="status"><span class="hearts" id="hearts" aria-label="Hearts"></span><span>Passenger <b id="pnum">1</b> of <b id="ptotal">5</b></span></div>
+    <div id="curb"><div class="sidewalk"></div><div class="road"><i></i></div><div id="rider"></div></div>
+    <div class="board"><div id="garage" role="group" aria-label="Cars"></div></div>
+  </section>
+  <div class="actions hidden" id="actions"><button class="pill" id="nextBtn">Next stage &rarr;</button></div>
   <div id="msg" role="status"></div>
 </main>
+
+<div class="gameover hidden" id="gameover" role="dialog" aria-modal="true" aria-labelledby="goTitle">
+  <div class="go-card" tabindex="-1">
+    <svg class="go-icon" width="56" height="56" viewBox="0 0 56 56" aria-hidden="true"><circle cx="28" cy="28" r="26" fill="#f7dc1a"/><circle cx="20" cy="23" r="3.5" fill="#1b1b1f"/><circle cx="36" cy="23" r="3.5" fill="#1b1b1f"/><path d="M18 41c5-6 15-6 20 0" stroke="#1b1b1f" stroke-width="3.5" fill="none" stroke-linecap="round"/></svg>
+    <h2 id="goTitle">Game over</h2>
+    <p class="go-reason" id="goReason"></p>
+    <div class="go-stats"><div><b id="goStages">0</b><span id="goStagesLabel">stages completed</span></div><div><b id="goBest">0</b><span>best</span></div></div>
+    <p class="go-tap">Tap anywhere to play again</p>
+    <button class="go-menu" id="goMenu">Back to menu</button>
+  </div>
+</div>
 
 <div id="rotate" role="alert"><div><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg><p>Turn your phone upright to play.</p></div></div>
 
 <script>
 // ---------- Rules (pure, no DOM; exported for tests) ----------
 const COLORS = ["#e754d0", "#f7dc1a", "#3bc14f", "#e23a2e", "#2f6fe8"]; // same as Color Breaker's marbles
-const DARK_TEXT = 1;          // yellow needs dark text and arrows
-const SLOTS = 5;              // most spots a level ever has
+const DARK_TEXT = 1;          // yellow needs dark arrows
+const SPOTS = 4;              // parking spots
+const RING = 16;              // places on the walking loop
 const SEATS = { 2: 4, 3: 6 }; // a car (2 long) has 4 seats, a bus (3 long) has 6
 
 // Math rules: the same as Number Cross.
@@ -184,18 +263,12 @@ const MODES = {
   hard:   { label: "Math: Hard",   math: "hard" },
 };
 
-// Bigger car parks, more cars and colors as the levels go up. Level 1 has 5 spots to learn; after that only 4
-// (math keeps 5 spots up to level 3, because every answer belongs to just one car).
-// Math car parks stay a little smaller so the sums are easy to read.
-// tries: how many queue plans to try; the trickiest one that can still be won is used.
-function levelConfig(mode, level) {
-  const math = !!MODES[mode].math;
-  const size = math ? (level <= 2 ? 6 : 7) : (level <= 1 ? 6 : level <= 4 ? 7 : 8);
-  const cap = math ? { 6: 9, 7: 13 }[size] : { 6: 10, 7: 15, 8: 19 }[size];
-  return { size, cars: Math.min(6 + level * 2, cap), colors: Math.min(COLORS.length, 3 + Math.floor(level / 2)),
-    slots: level <= (math ? 3 : 1) ? 5 : 4, tries: math ? Math.min(1 + level, 8) : Math.min(4 + level * 3, 24) };
+// ===== Colors =====
+// Stage 1 has 18 cars and 3 colors; from stage 3 there are 25 cars in 5 colors.
+// tries: how many plans to try; the trickiest one that can still be won is used.
+function colorsConfig(stage) {
+  return { size: 9, cars: stage <= 1 ? 18 : stage === 2 ? 22 : 25, colors: Math.min(COLORS.length, 2 + stage), tries: Math.min(3 + stage * 3, 18) };
 }
-
 const horizontal = car => car.dir === "L" || car.dir === "R";
 function cellsOf(car) {
   const out = [];
@@ -218,53 +291,23 @@ function occupancy(cars, w, h) {
 }
 function shuffle(a, rand) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 
-// Builds a level that can always be solved. Cars are placed one at a time, and each new car must have a clear way out
-// past every car already placed. So driving them out in the reverse order always works.
-function generate(mode, level, rand = Math.random) {
-  const cfg = levelConfig(mode, level), w = cfg.size, h = cfg.size;
-  let placed = [];
-  for (let attempt = 0; attempt < 20 && placed.length < Math.min(cfg.cars, 4); attempt++) {
-    placed = [];
-    const occ = Array.from({ length: h }, () => Array(w).fill(false));
-    for (let tries = 0; tries < 4000 && placed.length < cfg.cars; tries++) {
-      const len = rand() < 0.3 ? 3 : 2, dir = "UDLR"[Math.floor(rand() * 4)];
-      const hor = dir === "L" || dir === "R";
+// Places cars one at a time; each new car must have a clear way out past every car already placed,
+// so driving them out in reverse order always works. Keeps the fullest of several tries.
+function placeCars(w, h, want, rand) {
+  let best = [];
+  for (let attempt = 0; attempt < 30 && best.length < want; attempt++) {
+    const placed = [], occ = Array.from({ length: h }, () => Array(w).fill(false));
+    for (let tries = 0; tries < 6000 && placed.length < want; tries++) {
+      const len = rand() < 0.2 ? 3 : 2, dir = "UDLR"[Math.floor(rand() * 4)], hor = dir === "L" || dir === "R";
       const car = { len, dir, x: Math.floor(rand() * (hor ? w - len + 1 : w)), y: Math.floor(rand() * (hor ? h : h - len + 1)) };
-      if (cellsOf(car).some(([x, y]) => occ[y][x])) continue;
-      if (pathOf(car, w, h).some(([x, y]) => occ[y][x])) continue;
+      if (cellsOf(car).some(([x, y]) => occ[y][x]) || pathOf(car, w, h).some(([x, y]) => occ[y][x])) continue;
       placed.push(car);
       for (const [x, y] of cellsOf(car)) occ[y][x] = true;
     }
+    if (placed.length > best.length) best = placed;
   }
-  // Give each car its color (and sum, in math mode).
-  const math = MODES[mode].math, eqs = math ? shuffle(equationsFor(math), rand) : null, used = new Set();
-  const cars = placed.map((c, id) => {
-    const car = { ...c, id, seats: SEATS[c.len], color: Math.floor(rand() * cfg.colors), gone: false };
-    if (math) {
-      const e = eqs.find(q => !used.has(q[3])) || eqs[Math.floor(rand() * eqs.length)];
-      used.add(e[3]);
-      car.color = Math.floor(rand() * COLORS.length);
-      car.eq = e.slice(0, 3); car.key = e[3];
-    } else car.key = car.color;
-    return car;
-  });
-  // Plan who arrives when. Several plans are tried and the trickiest one that really can be won is kept.
-  let best = null;
-  for (let t = 0; t < cfg.tries; t++) {
-    const plan = planQueue(cars, w, h, cfg.slots, rand);
-    if (!plan || !wins(cars, w, h, cfg.slots, plan)) continue;
-    const score = plan.moved * 3 + plan.peak;
-    if (!best || score > best.score) best = { ...plan, score };
-  }
-  if (!best) { // fallback, never expected: the easy order (last car placed leaves first)
-    const taps = cars.map(c => c.id).reverse(), queue = [];
-    for (const id of taps) for (let k = 0; k < cars[id].seats; k++) queue.push(cars[id].key);
-    best = { taps, queue, moved: 0, peak: 1 };
-  }
-  return { mode, level, w, h, cars, order: best.taps, queue: best.queue, moved: best.moved,
-    slots: Array(cfg.slots).fill(null), parked: 0 };
+  return best;
 }
-
 // The cars that must drive out first (in order) before car `id` can leave, ignoring cars already gone.
 function chainFor(cars, w, h, gone, id) {
   const occ = Array.from({ length: h }, () => Array(w).fill(-1));
@@ -278,8 +321,8 @@ function chainFor(cars, w, h, gone, id) {
   })(id);
   return out;
 }
-// Plans the queue as a story: pick the next car whose people come, often one that is blocked, so its blockers
-// have to wait in spots first (and their people only come later). Never needs more spots than the level has.
+// Plans who comes when: often the people for a car that is blocked, so its blockers must wait in spots first.
+// Never needs more spots than there are.
 function planQueue(cars, w, h, slots, rand) {
   const gone = new Set(), served = new Set(), parked = [], taps = [], queue = [];
   let moved = 0, peak = 0;
@@ -302,11 +345,31 @@ function planQueue(cars, w, h, slots, rand) {
   }
   return { taps, queue, moved, peak };
 }
-// Plays a plan with the real rules to make sure it wins.
-function wins(cars, w, h, slots, plan) {
-  const s = { w, h, cars: cars.map(c => ({ ...c, gone: false })), queue: plan.queue.slice(), slots: Array(slots).fill(null), parked: 0 };
-  for (const id of plan.taps) { if (!tap(s, id).ok) return false; boardAll(s); }
-  return status(s) === "won";
+// A stage's state: people fill the loop (the first in the plan nearest the gate); the rest wait to join.
+function colorsState(stage, w, h, cars, queue, order, moved) {
+  const people = queue.map((key, id) => ({ id, key })), ring = Array(RING).fill(null);
+  for (let i = 0; i < RING && people.length; i++) ring[RING - 1 - i] = people.shift();
+  return { kind: "colors", stage, w, h, cars, ring, feed: people, slots: Array(SPOTS).fill(null), parked: 0, order, moved, boarded: 0, total: queue.length };
+}
+function generateColors(stage, rand = Math.random) {
+  const cfg = colorsConfig(stage), w = cfg.size, h = cfg.size;
+  const cars = placeCars(w, h, cfg.cars, rand).map((c, id) => {
+    const color = Math.floor(rand() * cfg.colors);
+    return { ...c, id, seats: SEATS[c.len], color, key: color, gone: false };
+  });
+  let best = null;
+  for (let t = 0; t < cfg.tries; t++) {
+    const plan = planQueue(cars, w, h, SPOTS, rand);
+    if (!plan || !ringWins(cars, w, h, plan)) continue;
+    const score = plan.moved * 3 + plan.peak;
+    if (!best || score > best.score) best = { ...plan, score };
+  }
+  if (!best) { // fallback, never expected: the easy order (last car placed leaves first)
+    const taps = cars.map(c => c.id).reverse(), queue = [];
+    for (const id of taps) for (let k = 0; k < cars[id].seats; k++) queue.push(cars[id].key);
+    best = { taps, queue, moved: 0 };
+  }
+  return colorsState(stage, w, h, cars, best.queue, best.taps, best.moved);
 }
 
 // The id of the first car in the way, or -1 if the way out is clear.
@@ -316,6 +379,7 @@ function blockerOf(s, id) {
   return -1;
 }
 // Tap a car: it drives out to the first free spot if its way is clear.
+// With s.hold (the page sets it), the car is "arriving" until its drive animation ends.
 function tap(s, id) {
   const car = s.cars[id];
   if (!car || car.gone) return { ok: false, reason: "gone" };
@@ -324,52 +388,142 @@ function tap(s, id) {
   const slot = s.slots.indexOf(null);
   if (slot < 0) return { ok: false, reason: "full" };
   car.gone = true;
-  s.slots[slot] = { id, key: car.key, color: car.color, eq: car.eq, seats: car.seats, filled: 0, at: s.parked++ };
+  s.slots[slot] = { id, key: car.key, color: car.color, seats: car.seats, filled: 0, at: s.parked++, arriving: !!s.hold };
   return { ok: true, slot };
 }
-// The spot the first person in line would get into: the earliest-parked matching car with a free seat.
-function boardingSlot(s) {
-  if (!s.queue.length) return -1;
+// The spot a person of this color would get into: the earliest-parked matching car with a free seat.
+function matchSlot(s, key) {
   let best = -1;
-  s.slots.forEach((sl, i) => { if (sl && sl.key === s.queue[0] && sl.filled < sl.seats && (best < 0 || sl.at < s.slots[best].at)) best = i; });
+  s.slots.forEach((sl, i) => {
+    if (sl && !sl.arriving && !sl.leaving && sl.key === key && sl.filled < sl.seats && (best < 0 || sl.at < s.slots[best].at)) best = i;
+  });
   return best;
 }
-// One person gets on, if they can. A full car drives away and frees its spot.
-function boardOne(s) {
-  const i = boardingSlot(s);
-  if (i < 0) return null;
-  const key = s.queue.shift(), sl = s.slots[i];
-  sl.filled++;
-  const left = sl.filled === sl.seats;
-  if (left) s.slots[i] = null;
-  return { slot: i, key, left };
+// One step of the loop: everyone moves one place. The person at the gate gets into a matching car if there is one.
+// An empty place at the gate is filled by the next person waiting to join.
+function ringStep(s) {
+  const ev = {};
+  s.ring.unshift(s.ring.pop());
+  const p = s.ring[0];
+  if (p) {
+    const i = matchSlot(s, p.key);
+    if (i >= 0) {
+      const sl = s.slots[i];
+      sl.filled++; s.ring[0] = null; s.boarded++;
+      ev.board = { person: p, slot: i, left: sl.filled === sl.seats };
+      if (ev.board.left) { if (s.hold) sl.leaving = true; else s.slots[i] = null; }
+    }
+  }
+  if (!s.ring[0] && s.feed.length) { s.ring[0] = s.feed.shift(); ev.entered = s.ring[0]; }
+  return ev;
 }
-function boardAll(s) { let n = 0; while (boardOne(s)) n++; return n; }
-function status(s) {
-  if (!s.queue.length) return "won";
-  if (s.slots.every(Boolean) && boardingSlot(s) < 0) return "lost";
-  return "playing";
+const peopleLeft = s => s.ring.filter(Boolean).length + s.feed.length;
+function colorsStatus(s) {
+  if (!peopleLeft(s)) return "won";
+  // Lost: every spot holds a waiting car, and nobody who can still reach the gate fits any of them.
+  if (!s.slots.every(sl => sl && !sl.leaving)) return "playing";
+  const can = s.ring.filter(Boolean).concat(s.ring.some(x => !x) ? s.feed : []);
+  return can.some(p => s.slots.some(sl => sl.key === p.key && sl.filled < sl.seats)) ? "playing" : "lost";
+}
+// Runs the loop until nothing more happens (everyone who can get in has got in).
+function settle(s) {
+  let idle = 0, n = 0;
+  while (peopleLeft(s) && idle <= RING) { const ev = ringStep(s); if (ev.board || ev.entered) { idle = 0; n++; } else idle++; }
+  return n;
+}
+// Plays a plan with the real rules (walking loop included) to make sure it wins.
+function ringWins(cars, w, h, plan) {
+  const s = colorsState(1, w, h, cars.map(c => ({ ...c, gone: false })), plan.queue, plan.taps, 0);
+  for (const id of plan.taps) {
+    if (!tap(s, id).ok) return false;
+    settle(s);
+    if (colorsStatus(s) === "lost") return false;
+  }
+  settle(s);
+  return colorsStatus(s) === "won";
+}
+
+// ===== Math =====
+// One passenger at a time. Later stages show more cars to choose from and have more passengers.
+function mathConfig(stage) { return { cars: Math.min(3 + stage, 8), riders: Math.min(4 + stage, 10), hearts: 3 }; }
+// A sum whose answer none of the other cars has, so there is only one right car.
+function freshEq(eqs, exclude, rand) {
+  const ok = eqs.filter(e => !exclude.has(e[3])), list = ok.length ? ok : eqs;
+  return list[Math.floor(rand() * list.length)];
+}
+function nextRider(s, prev) {
+  const keys = s.cars.map(c => c.key), others = keys.filter(k => k !== prev), list = others.length ? others : keys;
+  return list[Math.floor(s.rand() * list.length)];
+}
+function generateMath(mode, stage, rand = Math.random) {
+  const cfg = mathConfig(stage), eqs = equationsFor(MODES[mode].math), cars = [];
+  for (let i = 0; i < cfg.cars; i++) {
+    const e = freshEq(eqs, new Set(cars.map(c => c.key)), rand);
+    cars.push({ id: i, eq: e.slice(0, 3), key: e[3], color: Math.floor(rand() * COLORS.length) });
+  }
+  const s = { kind: "math", mode, stage, cars, served: 0, riders: cfg.riders, hearts: cfg.hearts, nextId: cfg.cars, rider: null, rand };
+  s.rider = nextRider(s, null);
+  return s;
+}
+// Tap a car: right if its answer is the passenger's number. A right car takes them away and a new car takes its place.
+function pick(s, id) {
+  const i = s.cars.findIndex(c => c.id === id);
+  if (i < 0 || s.hearts <= 0 || s.served >= s.riders) return null;
+  const car = s.cars[i];
+  if (car.key !== s.rider) { s.hearts--; return { ok: false, car, wanted: s.rider, over: s.hearts === 0 }; }
+  s.served++;
+  const e = freshEq(equationsFor(MODES[s.mode].math), new Set(s.cars.filter(c => c.id !== id).map(c => c.key)), s.rand);
+  const fresh = { id: s.nextId++, eq: e.slice(0, 3), key: e[3], color: Math.floor(s.rand() * COLORS.length) };
+  s.cars[i] = fresh;
+  const done = s.served >= s.riders;
+  s.rider = done ? null : nextRider(s, car.key);
+  return { ok: true, car, fresh, index: i, done };
 }
 
 if (typeof document === "undefined") {
-  module.exports = { COLORS, SLOTS, SEATS, LEVELS, MODES, easyAdd, easySub, equationsFor, levelConfig, cellsOf, pathOf, occupancy, generate, chainFor, planQueue, wins, blockerOf, tap, boardingSlot, boardOne, boardAll, status };
+  module.exports = { COLORS, SPOTS, RING, SEATS, LEVELS, MODES, easyAdd, easySub, equationsFor, colorsConfig, cellsOf, pathOf, occupancy,
+    placeCars, chainFor, planQueue, colorsState, generateColors, blockerOf, tap, matchSlot, ringStep, peopleLeft, colorsStatus, settle, ringWins,
+    mathConfig, generateMath, pick };
 } else {
 // ---------- Page ----------
 const $ = id => document.getElementById(id);
 const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
-const levelKey = mode => "colorrides-level-" + mode;
-const savedLevel = mode => Math.max(1, +store.get(levelKey(mode)) || 1);
-let g = null, busy = false, cell = 40, carEls = {};
+const bestKey = mode => "colorrides-best-" + mode;
+const bestOf = mode => +store.get(bestKey(mode)) || 0;
+let g = null, mode = "colors", busy = false, cell = 36, carEls = {}, walkerEls = {};
 window.__colorrides = () => g;
+window.__colorridesBusy = () => busy;
 
-function showMenuLevels() {
+// Game over: shows how you lost and how many stages you completed. Tap anywhere (or press Enter) to play again.
+// The card ignores taps for a moment, so a tap meant for the game doesn't restart it by accident.
+function hideGameOver() {
+  const el = document.getElementById("gameover");
+  el.classList.add("hidden"); el.classList.remove("show"); el.onclick = null;
+  if (el._key) { document.removeEventListener("keydown", el._key); el._key = null; }
+}
+function showGameOver({ reason, stages, best, label = "stages completed", onRestart, onMenu }) {
+  const el = document.getElementById("gameover");
+  hideGameOver();
+  document.getElementById("goReason").textContent = reason;
+  document.getElementById("goStages").textContent = stages;
+  document.getElementById("goStagesLabel").textContent = label;
+  document.getElementById("goBest").textContent = best;
+  el.classList.remove("hidden"); void el.offsetWidth; el.classList.add("show");
+  const ready = Date.now() + 700;
+  const again = e => { if (Date.now() < ready) return; if (e) e.preventDefault(); hideGameOver(); onRestart(); };
+  el._key = e => { if (e.key === "Enter" || e.key === " ") again(e); };
+  el.onclick = e => { if (e.target.closest("#goMenu")) { hideGameOver(); onMenu(); } else again(e); };
+  document.addEventListener("keydown", el._key);
+  el.querySelector(".go-card").focus();
+}
+
+function showMenuBest() {
   document.querySelectorAll("[data-mode]").forEach(b => {
-    const n = savedLevel(b.dataset.mode), name = b.dataset.mode === "colors" ? "Colors" : LEVELS[b.dataset.mode].label;
-    if (b.dataset.mode === "colors") b.innerHTML = name + (n > 1 ? " &middot; Level " + n : "") + " &rarr;";
-    else b.innerHTML = name + (n > 1 ? "<small>Level " + n + "</small>" : "");
+    const m = b.dataset.mode, n = bestOf(m), name = m === "colors" ? "Colors &rarr;" : LEVELS[m].label;
+    b.innerHTML = name + (n ? `<small>Best: ${n} ${n === 1 ? "stage" : "stages"}</small>` : "");
   });
 }
-showMenuLevels();
+showMenuBest();
 
 // A car seen from above, drawn facing right; it is turned to face its direction.
 // arrow: "roof" (big arrow on the roof), "hood" (small arrow on the bonnet, leaving the roof for a sum), or none.
@@ -412,13 +566,95 @@ function anim(el, frames, opts) {
   if (!el || !el.animate || reduce()) return Promise.resolve();
   return el.animate(frames, opts).finished.catch(() => {});
 }
+const sleep = ms => new Promise(r => setTimeout(r, reduce() ? 0 : ms));
 const center = r => ({ x: r.left + r.width / 2, y: r.top + r.height / 2 });
-window.__colorridesBusy = () => busy;
-
 function say(t) { $("msg").textContent = t; }
+function personHTML(k, math, big) {
+  return math ? `<span class="pp num${big ? " big" : ""}"><i></i><b>${k}</b></span>` : `<span class="pp" style="--c:${COLORS[k]}"><i></i><b></b></span>`;
+}
+// A small puff of smoke left behind by a car driving away.
+function puff(x, y) {
+  if (reduce()) return;
+  for (let i = 0; i < 4; i++) {
+    const d = document.createElement("i");
+    d.className = "smoke";
+    d.style.left = x + "px"; d.style.top = y + (Math.random() * 10 - 5) + "px";
+    document.body.appendChild(d);
+    d.animate([{ transform: "scale(.4)", opacity: .7 }, { transform: `translate(${-14 - Math.random() * 16}px, ${-8 - Math.random() * 12}px) scale(1.8)`, opacity: 0 }],
+      { duration: 700, delay: i * 70, easing: "ease-out", fill: "both" }).finished.then(() => d.remove(), () => d.remove());
+  }
+}
+function stageBanner(text, sub) {
+  const b = document.createElement("div");
+  b.className = "stagebanner"; b.innerHTML = `<b>${text}</b><span>${sub}</span>`;
+  document.body.appendChild(b);
+  return b;
+}
+function clearFx() { document.querySelectorAll(".flyer, .hopper, .smoke, .stagebanner").forEach(e => e.remove()); }
 
-function layout() {
-  // The car park is square: as big as the panel allows.
+// ===== Colors view =====
+const TICK = () => window.__crTick || 340;   // ms per step of the walking loop
+let raf = 0, running = false, last = 0, phase = 0;
+let ringGeo = null;
+
+// The loop is a running track shape; t goes from 0 to 1 round it, starting at the gate (bottom middle).
+function ringPoint(t) {
+  const { W, H, m, r, L, P } = ringGeo;
+  let d = ((t % 1) + 1) % 1 * P;
+  const cy = H / 2;
+  if (d < L / 2) return { x: W / 2 + d, y: H - m };
+  d -= L / 2;
+  if (d < Math.PI * r) { const a = Math.PI / 2 - d / r; return { x: W - m - r + r * Math.cos(a), y: cy + r * Math.sin(a) }; }
+  d -= Math.PI * r;
+  if (d < L) return { x: W - m - r - d, y: m };
+  d -= L;
+  if (d < Math.PI * r) { const a = -Math.PI / 2 - d / r; return { x: m + r + r * Math.cos(a), y: cy + r * Math.sin(a) }; }
+  d -= Math.PI * r;
+  return { x: m + r + d, y: H - m };
+}
+function drawTrack() {
+  const el = $("ring"), W = el.clientWidth, H = el.clientHeight, m = 16, r = (H - 2 * m) / 2, L = W - 2 * m - 2 * r;
+  ringGeo = { W, H, m, r, L, P: 2 * L + 2 * Math.PI * r };
+  const d = `M${W / 2} ${H - m} H${W - m - r} A${r} ${r} 0 0 0 ${W - m - r} ${m} H${m + r} A${r} ${r} 0 0 0 ${m + r} ${H - m} Z`;
+  $("track").innerHTML = `<path d="${d}" fill="none" stroke="var(--border)" stroke-width="32" stroke-linejoin="round"/>
+    <path d="${d}" fill="none" stroke="var(--hole)" stroke-width="28" stroke-linejoin="round"/>
+    <path d="M${W / 2 - 15} ${H - 4} h30 l-15 9 z" fill="var(--link)"/>`;
+}
+function drawWalkers() {
+  const seen = new Set(), ph = reduce() ? 0 : phase;
+  g.ring.forEach((p, i) => {
+    if (!p) return;
+    seen.add(p.id);
+    let el = walkerEls[p.id];
+    if (!el) {
+      const wrap = document.createElement("div"); wrap.innerHTML = personHTML(p.key, false);
+      el = wrap.firstElementChild; el.dataset.pid = p.id; $("walkers").appendChild(el); walkerEls[p.id] = el;
+      anim(el, [{ opacity: 0 }, { opacity: 1 }], { duration: 250 });
+    }
+    const pt = ringPoint((i + ph) / RING), bob = reduce() ? 0 : Math.abs(Math.sin((i + ph) * Math.PI)) * -3;
+    el.style.transform = `translate(${pt.x - 11}px, ${pt.y - 22 + bob}px)`;
+  });
+  for (const id in walkerEls) if (!seen.has(+id)) { walkerEls[id].remove(); delete walkerEls[id]; }
+  $("waiting").textContent = peopleLeft(g);
+}
+function frame(t) {
+  if (!running) return;
+  phase += (t - last) / TICK(); last = t;
+  for (let n = 0; phase >= 1 && running && n < 30; n++) { phase -= 1; tickColors(); }
+  if (running) { drawWalkers(); raf = requestAnimationFrame(frame); }
+}
+function startLoop() { running = true; last = performance.now(); phase = 0; cancelAnimationFrame(raf); raf = requestAnimationFrame(frame); }
+function stopLoop() { running = false; cancelAnimationFrame(raf); }
+
+function tickColors() {
+  const ev = ringStep(g);
+  if (ev.board) onBoard(ev.board);
+  const st = colorsStatus(g);
+  if (st === "won") { stopLoop(); drawWalkers(); setTimeout(() => stageDone(), reduce() ? 0 : 900); }
+  else if (st === "lost") { stopLoop(); drawWalkers(); colorsLost(); }
+}
+
+function layoutLot() {
   const box = $("lot").parentElement, size = Math.floor(Math.min(box.clientWidth - 18, box.clientHeight - 18) / g.w) * g.w;
   cell = size / g.w;
   const lot = $("lot");
@@ -429,19 +665,13 @@ function layout() {
   });
   for (const car of g.cars) {
     const el = carEls[car.id]; if (!el) continue;
-    const hor = car.dir === "L" || car.dir === "R", w = (hor ? car.len : 1) * cell - 4, h = (hor ? 1 : car.len) * cell - 4;
-    Object.assign(el.style, { left: car.x * cell + 2 + "px", top: car.y * cell + 2 + "px", width: w + "px", height: h + "px",
-      fontSize: Math.max(10, Math.min(15, cell * .3)) + "px" });
-    // The drawing faces right; turn it to face the car's direction.
+    const hor = horizontal(car), w = (hor ? car.len : 1) * cell - 4, h = (hor ? 1 : car.len) * cell - 4;
+    Object.assign(el.style, { left: car.x * cell + 2 + "px", top: car.y * cell + 2 + "px", width: w + "px", height: h + "px" });
     const svg = el.querySelector("svg.body"), long = hor ? w : h, short = hor ? h : w;
     Object.assign(svg.style, { width: long + "px", height: short + "px", left: (w - long) / 2 + "px", top: (h - short) / 2 + "px",
       transform: `rotate(${DIR_DEG[car.dir]}deg)` });
-    // math: keep the sum on the roof, away from the arrow on the bonnet
-    if (car.eq) el.style.padding = { R: `0 ${cell * .45}px 0 0`, L: `0 0 0 ${cell * .45}px`, D: `0 0 ${cell * .45}px`, U: `${cell * .45}px 0 0` }[car.dir];
   }
 }
-window.addEventListener("resize", () => g && layout());
-
 function buildLot() {
   const lot = $("lot");
   lot.innerHTML = ""; carEls = {};
@@ -450,171 +680,252 @@ function buildLot() {
   }
   for (const car of g.cars) {
     const el = document.createElement("button");
-    el.className = "car";
-    el.dataset.id = car.id;
-    const hor = car.dir === "L" || car.dir === "R";
-    let label = "";
-    if (car.eq) label = hor ? `<span class="lab">${eqText(car.eq)}</span>` : `<span class="lab"><span>${car.eq[0]}</span><span>${car.eq[1]} ${car.eq[2]}</span><span>=</span></span>`;
-    el.innerHTML = carSVG(car.len, car.color, car.eq ? "hood" : "roof") + label;
-    const dirWord = { U: "up", D: "down", L: "left", R: "right" }[car.dir];
-    el.setAttribute("aria-label", (car.eq ? car.eq.join(" ") + " equals what, " : "") + (car.len === 3 ? "bus" : "car") + ", drives " + dirWord);
-    el.addEventListener("click", () => onTap(car.id));
+    el.className = "car"; el.dataset.id = car.id;
+    el.innerHTML = carSVG(car.len, car.color, "roof");
+    el.setAttribute("aria-label", (car.len === 3 ? "bus" : "car") + ", drives " + { U: "up", D: "down", L: "left", R: "right" }[car.dir]);
+    el.addEventListener("click", () => onTapCar(car.id));
     lot.appendChild(el); carEls[car.id] = el;
   }
-  layout();
-  // Cars roll in one after another.
+  layoutLot();
   g.cars.forEach((car, i) => {
     const [dx, dy] = DIR_VEC[car.dir];
     anim(carEls[car.id], [{ opacity: 0, transform: `translate(${-dx * 10}px, ${-dy * 10}px) scale(.9)` }, { opacity: 1, transform: "none" }],
-      { duration: 320, delay: 40 * i, easing: "cubic-bezier(.2,.8,.3,1)", fill: "backwards" });
+      { duration: 300, delay: 25 * i, easing: "cubic-bezier(.2,.8,.3,1)", fill: "backwards" });
   });
 }
-
-// People in line: a head and a body. In math they carry their number.
-function personHTML(k, first) {
-  const math = !!MODES[g.mode].math;
-  return math ? `<span class="pp num${first ? " first" : ""}"><i></i><b>${k}</b></span>`
-              : `<span class="pp${first ? " first" : ""}" style="--c:${COLORS[k]}"><i></i><b></b></span>`;
-}
-function renderQueue(slide) {
-  $("waiting").textContent = g.queue.length;
-  const q = $("queue");
-  q.innerHTML = g.queue.slice(0, 16).map((k, i) => personHTML(k, i === 0)).join("");
-  // Everyone steps forward one place.
-  if (slide) [...q.children].forEach(p => anim(p, [{ transform: "translateX(26px)" }, { transform: "none" }], { duration: 200, easing: "ease-out" }));
-}
 function slotHTML(sl) {
-  if (!sl) return `<div class="slot" aria-label="Empty spot">P</div>`;
+  if (!sl || sl.arriving) return `<div class="slot" aria-label="Empty spot">P</div>`;
   const seats = Array.from({ length: sl.seats }, (_, i) => `<i class="${i < sl.filled ? "f" : ""}"></i>`).join("");
-  const len = sl.seats === SEATS[3] ? 3 : 2;
-  return `<div class="slot on" aria-label="${sl.filled} of ${sl.seats} seats taken"><span class="mini">${carSVG(len, sl.color, "")}${sl.eq ? `<span class="lab">${eqText(sl.eq)}</span>` : ""}</span><span class="seats">${seats}</span></div>`;
+  return `<div class="slot on" aria-label="${sl.filled} of ${sl.seats} seats taken"><span class="mini">${carSVG(sl.seats === SEATS[3] ? 3 : 2, sl.color, "")}</span><span class="seats">${seats}</span></div>`;
 }
-// override: draw spot i as `slot` (used to show a car that is full just before it drives away).
-function renderSlots(override) {
-  const el = $("slots");
-  el.style.gridTemplateColumns = `repeat(${g.slots.length}, 1fr)`;
-  el.innerHTML = g.slots.map((sl, i) => slotHTML(override && override.i === i ? override.slot : sl)).join("");
+// Each spot is drawn on its own, so one car driving away doesn't disturb the others.
+const shown = [];
+function renderSlot(i) {
+  const box = $("slots").children[i], sl = g.slots[i];
+  box.innerHTML = slotHTML(sl);
+  shown[i] = sl ? sl.filled : -1;
 }
-const slotEl = i => $("slots").children[i];
+function buildSlots() { $("slots").innerHTML = g.slots.map(() => `<div></div>`).join(""); g.slots.forEach((_, i) => renderSlot(i)); }
+const slotBox = i => $("slots").children[i];
 
-// A tapped car pulls forward out of the car park, then glides and turns into its parking spot.
+// A tapped car pulls forward out of the car park, then glides and turns into its spot.
 async function driveToSpot(id, slot) {
   const el = carEls[id], car = g.cars[id];
   delete carEls[id];
   if (reduce() || !el.animate) { el.remove(); return; }
-  const r = el.getBoundingClientRect(), hor = car.dir === "L" || car.dir === "R";
-  const long = hor ? r.width : r.height, short = hor ? r.height : r.width;
+  const r = el.getBoundingClientRect(), hor = horizontal(car), long = hor ? r.width : r.height, short = hor ? r.height : r.width;
   const fly = document.createElement("div");
-  fly.className = "flyer";
-  fly.style.width = long + "px"; fly.style.height = short + "px";
-  fly.innerHTML = carSVG(car.len, car.color, "") + (car.eq ? `<span class="lab">${eqText(car.eq)}</span>` : "");
+  fly.className = "flyer"; fly.style.width = long + "px"; fly.style.height = short + "px";
+  fly.innerHTML = carSVG(car.len, car.color, "");
   document.body.appendChild(fly);
   el.remove();
   const a = center(r), [dx, dy] = DIR_VEC[car.dir], out = { x: a.x + dx * cell * 1.2, y: a.y + dy * cell * 1.2 };
-  const t = slotEl(slot).getBoundingClientRect(), b = { x: t.left + t.width / 2, y: t.top + 20 };
+  const t = slotBox(slot).getBoundingClientRect(), b = { x: t.left + t.width / 2, y: t.top + 20 };
   const scale = Math.min((t.width * .94) / long, 28 / short);
   const at = (p, rot, sc) => `translate(${p.x - long / 2}px, ${p.y - short / 2}px) rotate(${rot}deg) scale(${sc})`;
-  // Turn the short way round to face right in the spot.
   const rot0 = DIR_DEG[car.dir], rot1 = car.dir === "L" ? 360 : 0;
   await fly.animate([
     { transform: at(a, rot0, 1), easing: "cubic-bezier(.5,0,.8,.6)" },
-    { transform: at(out, rot0, 1), offset: .32, easing: "cubic-bezier(.3,.6,.25,1)" },
+    { transform: at(out, rot0, 1), offset: .3, easing: "cubic-bezier(.3,.6,.25,1)" },
     { transform: at(b, rot1, scale) },
-  ], { duration: 680, fill: "forwards" }).finished.catch(() => {});
+  ], { duration: 650, fill: "forwards" }).finished.catch(() => {});
   fly.remove();
 }
-// The first person in line hops into the car in spot i.
-async function hop(i) {
-  const p = $("queue").firstElementChild, target = slotEl(i);
-  if (!p || !target || reduce() || !p.animate) return;
-  const r = p.getBoundingClientRect(), t = target.getBoundingClientRect();
-  const fly = p.cloneNode(true);
-  fly.classList.add("hopper"); fly.classList.remove("first");
-  fly.style.left = r.left + "px"; fly.style.top = r.top + "px";
-  document.body.appendChild(fly);
-  p.style.visibility = "hidden";
-  const dx = t.left + t.width / 2 - (r.left + r.width / 2), dy = t.top + t.height / 2 - (r.top + r.height / 2);
-  await fly.animate([
-    { transform: "translate(0, 0) scale(1)" },
-    { transform: `translate(${dx * .5}px, ${dy * .5 - 22}px) scale(1.05)`, offset: .5 },
-    { transform: `translate(${dx}px, ${dy}px) scale(.45)`, opacity: .2 },
-  ], { duration: 230, easing: "ease-in-out", fill: "forwards" }).finished.catch(() => {});
-  fly.remove();
+// The person at the gate walks to their car.
+async function onBoard({ person, slot, left }) {
+  const el = walkerEls[person.id];
+  delete walkerEls[person.id];
+  if (el && !reduce() && el.animate) {
+    const r = el.getBoundingClientRect(), t = slotBox(slot).getBoundingClientRect();
+    el.remove();
+    const fly = document.createElement("div"); fly.className = "hopper"; fly.innerHTML = personHTML(person.key, false);
+    document.body.appendChild(fly);
+    const x0 = r.left, y0 = r.top, x1 = t.left + t.width / 2 - 11, y1 = t.top + 6;
+    await fly.animate([
+      { transform: `translate(${x0}px, ${y0}px)` },
+      { transform: `translate(${(x0 + x1) / 2}px, ${Math.min(y0, y1) - 16}px)`, offset: .45 },
+      { transform: `translate(${x1}px, ${y1}px) scale(.5)`, opacity: .3 },
+    ], { duration: 380, easing: "ease-in-out", fill: "forwards" }).finished.catch(() => {});
+    fly.remove();
+  } else if (el) el.remove();
+  if (!g || g.kind !== "colors") return;
+  const sl = g.slots[slot];
+  if (!sl) return;
+  renderSlot(slot);
+  anim(slotBox(slot).querySelectorAll(".seats i")[sl.filled - 1], [{ transform: "scale(0)" }, { transform: "scale(1.6)" }, { transform: "scale(1)" }], { duration: 220 });
+  if (left) await driveAway(slot);
 }
-// A full car pulls away from its spot.
-async function driveAway(i, sl) {
-  renderSlots({ i, slot: sl });
-  const s = slotEl(i);
-  await anim(s.querySelector(".seats"), [{ transform: "scale(1)" }, { transform: "scale(1.25)" }, { transform: "scale(1)" }], { duration: 180 });
-  await anim(s.querySelector(".mini"), [
-    { transform: "translateX(0)", opacity: 1 },
-    { transform: "translateX(-5px)", opacity: 1, offset: .18 },
-    { transform: "translateX(160%)", opacity: 0 },
-  ], { duration: 420, easing: "cubic-bezier(.5,0,.75,0)", fill: "forwards" });
-}
-async function boardLoop() {
-  for (;;) {
-    const i = boardingSlot(g);
-    if (i < 0) return;
-    await hop(i);
-    const before = { ...g.slots[i] }, ev = boardOne(g);
-    renderQueue(true);
-    if (ev.left) { await driveAway(i, { ...before, filled: before.seats }); renderSlots(); continue; }
-    renderSlots();
-    anim(slotEl(i).querySelectorAll(".seats i")[before.filled], [{ transform: "scale(0)" }, { transform: "scale(1.6)" }, { transform: "scale(1)" }], { duration: 220, easing: "ease-out" });
+// A full car nudges, drives off and leaves a puff of smoke; the spot is free again.
+async function driveAway(slot) {
+  const box = slotBox(slot), mini = box.querySelector(".mini");
+  await sleep(160);
+  if (mini && !reduce()) {
+    const r = mini.getBoundingClientRect();
+    puff(r.left + 4, r.top + r.height / 2);
+    await anim(mini, [{ transform: "translateX(0)", opacity: 1 }, { transform: "translateX(-5px)", offset: .15 }, { transform: "translateX(170%)", opacity: 0 }],
+      { duration: 480, easing: "cubic-bezier(.5,0,.75,0)", fill: "forwards" });
   }
+  if (!g || g.kind !== "colors") return;
+  g.slots[slot] = null;
+  renderSlot(slot);
 }
-
-function start(mode, level) {
-  g = generate(mode, level || savedLevel(mode)); busy = false;
-  $("menu").classList.add("hidden"); $("game").classList.remove("hidden"); $("actions").classList.add("hidden");
-  $("modeName").textContent = MODES[mode].label; $("level").textContent = g.level;
-  const spots = g.slots.length + " parking spots";
-  say(MODES[mode].math ? `Find the car whose answer is the first number in line. Only ${spots}, so plan ahead!`
-                       : `People get on a car of their color. Only ${spots}, so plan ahead!`);
-  renderQueue(); renderSlots(); buildLot();
-}
-function toMenu() { g = null; busy = false; document.querySelectorAll(".flyer, .hopper").forEach(e => e.remove()); showMenuLevels(); $("game").classList.add("hidden"); $("menu").classList.remove("hidden"); }
-document.querySelectorAll("[data-mode]").forEach(b => b.onclick = () => start(b.dataset.mode));
-$("menuBtn").onclick = toMenu;
-$("nextBtn").onclick = () => { const s = status(g); start(g.mode, s === "won" ? g.level + 1 : g.level); };
-
 function bump(el, dx, dy) {
   anim(el, [{ transform: "translate(0,0)" }, { transform: `translate(${dx * 7}px, ${dy * 7}px)` }, { transform: "translate(0,0)" },
     { transform: `translate(${dx * 2}px, ${dy * 2}px)` }, { transform: "translate(0,0)" }], { duration: 340, easing: "ease-out" });
 }
-async function onTap(id) {
-  if (busy || !g || status(g) !== "playing") return;
+async function onTapCar(id) {
+  if (!g || g.kind !== "colors" || !running) return;
   const game = g, res = tap(g, id);
   if (!res.ok) {
     if (res.reason === "blocked") {
       const [dx, dy] = DIR_VEC[g.cars[id].dir];
       bump(carEls[id], dx, dy);
-      // The car in the way gives a little flash.
       anim(carEls[res.by], [{ filter: "brightness(1)" }, { filter: "brightness(1.35) drop-shadow(0 0 5px rgba(255,255,255,.9))" }, { filter: "brightness(1)" }], { duration: 520, delay: 120 });
       say("That car is blocked. Move the car in its way first.");
     }
-    if (res.reason === "full") { const s = $("slots"); s.classList.remove("shake-row"); void s.offsetWidth; s.classList.add("shake-row"); say("All parking spots are full! Nobody in front can get on those cars."); }
+    if (res.reason === "full") { const s = $("slots"); s.classList.remove("shake-row"); void s.offsetWidth; s.classList.add("shake-row"); say("All 4 spots are full! Wait for people to get in."); }
+    return;
+  }
+  say("");
+  renderSlot(res.slot);
+  await driveToSpot(id, res.slot);
+  if (g !== game) return;
+  g.slots[res.slot].arriving = false;
+  renderSlot(res.slot);
+  anim(slotBox(res.slot).querySelector(".mini"), [{ transform: "scale(.85)" }, { transform: "scale(1.06)" }, { transform: "scale(1)" }], { duration: 260, easing: "ease-out" });
+}
+async function colorsLost() {
+  busy = true;
+  // The cars in the spots honk (shake) before the game-over card drops in.
+  [...$("slots").children].forEach(b => anim(b, [{ transform: "translateX(0)" }, { transform: "translateX(-5px)" }, { transform: "translateX(5px)" }, { transform: "translateX(0)" }], { duration: 260, iterations: 2 }));
+  say("All 4 spots are full and nobody fits!");
+  await sleep(700);
+  gameOver("All 4 parking spots were full, and nobody walking round could get into those cars.");
+}
+
+// ===== Math view =====
+const heartSVG = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.2C.9 8.4 3 4.5 6.7 4.5c2.1 0 3.6 1.2 5.3 3.1 1.7-1.9 3.2-3.1 5.3-3.1 3.7 0 5.8 3.9 4.3 7.3C19.5 16.4 12 21 12 21z" fill="#e23a2e"/></svg>`;
+function renderHearts() {
+  $("hearts").innerHTML = Array.from({ length: 3 }, (_, i) => `<span class="${i < g.hearts ? "" : "gone"}">${heartSVG}</span>`).join("");
+  $("hearts").setAttribute("aria-label", g.hearts + " hearts left");
+}
+function renderRider() { $("rider").innerHTML = g.rider === null ? "" : personHTML(g.rider, true, true); }
+function gcarHTML(car) { return `${carSVG(2, car.color, "")}<span class="lab">${eqText(car.eq)}</span>`; }
+function buildGarage() {
+  $("garage").innerHTML = g.cars.map(c => `<button class="gcar" data-id="${c.id}" aria-label="${c.eq.join(" ")} equals what">${gcarHTML(c)}</button>`).join("");
+  $("garage").querySelectorAll(".gcar").forEach(b => b.onclick = () => onPick(+b.dataset.id));
+  layoutGarage();
+  [...$("garage").children].forEach((b, i) => anim(b, [{ opacity: 0, transform: "translateY(12px) scale(.9)" }, { opacity: 1, transform: "none" }], { duration: 320, delay: 50 * i, easing: "ease-out", fill: "backwards" }));
+}
+// Cars as big as the space allows: two per row.
+function layoutGarage() {
+  const box = $("garage").parentElement, rows = Math.ceil(g.cars.length / 2);
+  const w = Math.min((box.clientWidth - 16 - 12) / 2, ((box.clientHeight - 16 - 10 * (rows - 1)) / rows) / 0.52, 190);
+  $("garage").querySelectorAll(".gcar").forEach(b => { b.style.width = w + "px"; b.style.height = w * 0.52 + "px"; });
+}
+function updateMathStatus() { $("pnum").textContent = Math.min(g.served + 1, g.riders); $("ptotal").textContent = g.riders; renderHearts(); }
+
+async function onPick(id) {
+  if (busy || !g || g.kind !== "math") return;
+  const btn = $("garage").querySelector(`.gcar[data-id="${id}"]`), res = pick(g, id);
+  if (!res) return;
+  if (!res.ok) {
+    const c = res.car;
+    say(`${c.eq[0]} ${c.eq[1]} ${c.eq[2]} = ${c.key}. We need ${res.wanted}!`);
+    anim(btn, [{ transform: "translateX(0)" }, { transform: "translateX(-7px)" }, { transform: "translateX(7px)" }, { transform: "translateX(-4px)" }, { transform: "translateX(0)" }], { duration: 380 });
+    anim($("rider"), [{ transform: "rotate(0)" }, { transform: "rotate(-10deg)" }, { transform: "rotate(10deg)" }, { transform: "rotate(0)" }], { duration: 420 });
+    renderHearts();
+    anim($("hearts").children[g.hearts], [{ transform: "scale(1.6)" }, { transform: "scale(1)" }], { duration: 300 });
+    if (res.over) { busy = true; await sleep(900); gameOver(`3 wrong cars. The last one was ${c.eq[0]} ${c.eq[1]} ${c.eq[2]} = ${c.key}, but the passenger needed ${res.wanted}.`); }
     return;
   }
   busy = true; say("");
-  await driveToSpot(id, res.slot);
-  if (g !== game) return;           // went back to the menu meanwhile
-  renderSlots();
-  anim(slotEl(res.slot).querySelector(".mini"), [{ transform: "scale(.85)" }, { transform: "scale(1.06)" }, { transform: "scale(1)" }], { duration: 260, easing: "ease-out" });
-  await boardLoop();
+  const game = g;
+  await pickUp(btn, res.car);
   if (g !== game) return;
+  // The new car rolls into the empty place.
+  btn.dataset.id = res.fresh.id; btn.innerHTML = gcarHTML(res.fresh); btn.setAttribute("aria-label", res.fresh.eq.join(" ") + " equals what");
+  btn.style.visibility = "";
+  anim(btn, [{ opacity: 0, transform: "scale(.6)" }, { opacity: 1, transform: "scale(1.05)" }, { transform: "scale(1)" }], { duration: 340, easing: "ease-out" });
+  if (res.done) { busy = false; stageDone(); return; }
+  updateMathStatus(); renderRider();
+  await anim($("rider"), [{ transform: "translateX(-180px)" }, { transform: "translateX(6px)", offset: .85 }, { transform: "translateX(0)" }], { duration: 500, easing: "ease-out" });
   busy = false;
-  const s = status(g);
-  if (s === "won") {
-    store.set(levelKey(g.mode), Math.max(savedLevel(g.mode), g.level + 1));
-    say("Everyone got a ride! Level " + g.level + " done.");
-    $("nextBtn").innerHTML = "Next level &rarr;"; $("actions").classList.remove("hidden"); layout();
-  } else if (s === "lost") {
-    say("All the spots are full and nobody in front can get on. Try again!");
-    $("nextBtn").textContent = "Try again"; $("actions").classList.remove("hidden"); layout();
-  } else if (g.slots.every(Boolean)) say("Careful: every spot is taken!");
 }
+// The car drives up to the road and stops in front of the passenger, they get in, and the car drives off leaving a little smoke.
+async function pickUp(btn, car) {
+  const rider = $("rider");
+  if (reduce() || !btn.animate) { rider.innerHTML = ""; return; }
+  const r = btn.getBoundingClientRect(), road = $("curb").querySelector(".road").getBoundingClientRect(), rr = rider.getBoundingClientRect();
+  const fly = document.createElement("div");
+  fly.className = "flyer"; fly.style.width = r.width + "px"; fly.style.height = r.height + "px";
+  fly.innerHTML = gcarHTML(car);
+  document.body.appendChild(fly);
+  btn.style.visibility = "hidden";
+  const scale = Math.min(1, (road.height - 10) / r.height), a = center(r), stop = { x: rr.left + rr.width / 2, y: road.top + road.height / 2 };
+  const at = (p, rot, sc) => `translate(${p.x - r.width / 2}px, ${p.y - r.height / 2}px) rotate(${rot}deg) scale(${sc})`;
+  await fly.animate([
+    { transform: at(a, 0, 1) },
+    { transform: at({ x: a.x, y: a.y - 8 }, 0, 1.04), offset: .15 },
+    { transform: at({ x: stop.x - 30, y: stop.y + 4 }, -6, scale), offset: .8 },
+    { transform: at(stop, 0, scale) },
+  ], { duration: 800, easing: "ease-in-out", fill: "forwards" }).finished.catch(() => {});
+  // The passenger steps into the car.
+  await anim(rider, [{ transform: "translateY(0) scale(1)", opacity: 1 }, { transform: "translateY(-6px) scale(1)", offset: .3 }, { transform: `translateY(${stop.y - rr.top - rr.height / 2}px) scale(.35)`, opacity: 0 }],
+    { duration: 420, easing: "ease-in", fill: "forwards" });
+  rider.innerHTML = "";
+  rider.getAnimations().forEach(a => a.cancel());
+  // Off it goes, with a little smoke.
+  const w = r.width * scale;
+  puff(stop.x - w / 2, stop.y + 6);
+  setTimeout(() => puff(stop.x - w / 2 + 60, stop.y + 6), 160);
+  await fly.animate([{ transform: at(stop, 0, scale) }, { transform: at({ x: stop.x - 6, y: stop.y }, 0, scale), offset: .1 },
+    { transform: at({ x: innerWidth + r.width, y: stop.y }, 0, scale) }], { duration: 700, easing: "cubic-bezier(.5,0,.8,.4)", fill: "forwards" }).finished.catch(() => {});
+  fly.remove();
+}
+
+// ===== Both =====
+function stageDone() {
+  if (!g) return;
+  const done = g.stage;
+  if (done > bestOf(mode)) store.set(bestKey(mode), done);
+  stageBanner(`Stage ${done} complete!`, g.kind === "colors" ? "Everyone got a ride." : "All passengers picked up.");
+  say(`Well done! Stage ${done} complete.`);
+  $("actions").classList.remove("hidden");
+  if (g.kind === "colors") layoutLot(); else layoutGarage();
+}
+function gameOver(reason) {
+  stopLoop(); busy = true;
+  const stages = g.stage - 1, best = Math.max(bestOf(mode), stages);
+  store.set(bestKey(mode), best);
+  showGameOver({ reason, stages, best, onRestart: () => start(mode, 1), onMenu: toMenu });
+}
+function start(m, stage) {
+  mode = m; stopLoop(); clearFx(); hideGameOver(); busy = false;
+  walkerEls = {}; $("walkers").innerHTML = "";
+  const math = !!MODES[m].math;
+  g = math ? generateMath(m, stage) : generateColors(stage);
+  if (!math) g.hold = true;
+  $("menu").classList.add("hidden"); $("game").classList.remove("hidden"); $("actions").classList.add("hidden");
+  $("colorsView").classList.toggle("hidden", math); $("mathView").classList.toggle("hidden", !math);
+  $("modeName").textContent = MODES[m].label; $("stage").textContent = stage;
+  if (math) {
+    updateMathStatus(); renderRider(); buildGarage();
+    say(`Which car makes ${g.rider}? Tap it to pick the passenger up.`);
+    anim($("rider"), [{ transform: "translateX(-180px)" }, { transform: "translateX(0)" }], { duration: 500, easing: "ease-out" });
+  } else {
+    drawTrack(); buildSlots(); buildLot(); drawWalkers();
+    say("People get into cars of their color as they walk past the exit. You have 4 spots.");
+    startLoop();
+  }
+}
+function toMenu() { stopLoop(); clearFx(); hideGameOver(); g = null; busy = false; showMenuBest(); $("game").classList.add("hidden"); $("menu").classList.remove("hidden"); }
+document.querySelectorAll("[data-mode]").forEach(b => b.onclick = () => start(b.dataset.mode, 1));
+$("menuBtn").onclick = toMenu;
+$("nextBtn").onclick = () => start(mode, g.stage + 1);
+// Keep the right size when the window changes; the math hint follows the passenger.
+window.addEventListener("resize", () => { if (!g) return; if (g.kind === "colors") { drawTrack(); layoutLot(); drawWalkers(); } else layoutGarage(); });
+document.addEventListener("visibilitychange", () => { if (!g || g.kind !== "colors") return; if (document.hidden) stopLoop(); else if (!busy && colorsStatus(g) === "playing") startLoop(); });
 }
 </script>
 </body>
